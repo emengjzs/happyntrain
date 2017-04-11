@@ -16,7 +16,6 @@ using Ptr = std::unique_ptr<Object>;
 // -------------------------
 // Effective C++
 // -------------------------
-
 // macro
 #define DISABLE_COPY(Clazz)     \
  private:                       \
