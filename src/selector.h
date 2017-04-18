@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include "util.h"
 
 namespace happyntrain {
@@ -10,12 +12,13 @@ class Selector : NoCopy {
   int64_t _id;
 
  public:
-  Selector() : _id(GetNewId()) {}
-  ~Selector();
+  template <typename... Vars>
+  Selector(Vars&&... args) : _id(GetNewId()), _selector(args...) {}
+  ~Selector() {}
 
   inline void AddChannel() { _selector.AddChannel(); }
   inline void RemoveChannel() { _selector.RemoveChannel(); }
-  inline voud UpdateChannel() { _selector.UpdateChannel(); }
+  inline void UpdateChannel() { _selector.UpdateChannel(); }
 
  private:
   static int64_t GetNewId() {
@@ -23,4 +26,6 @@ class Selector : NoCopy {
     return id++;
   }
 };
+
+// end happyntrain
 }

@@ -2,6 +2,8 @@
 
 #include <sys/epoll.h>
 
+#include "util.h"
+
 namespace happyntrain {
 
 class EpollSelector : NoCopy {
@@ -13,6 +15,6 @@ class EpollSelector : NoCopy {
 
   void AddChannel();
   void RemoveChannel();
-  voud UpdateChannel();
+  void UpdateChannel();
 };
 }
