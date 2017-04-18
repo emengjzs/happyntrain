@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#include "logging.h"
+
 namespace happyntrain {
 
 // -------------------------
@@ -30,4 +32,26 @@ class NoCopy {
 };
 
 // --------------------------
+// Fail checking
+// --------------------------
+#define EXPECT(expression, message, ...)                                       \
+  do {                                                                         \
+    if (!(expression)) {                                                       \
+      ERROR("Fail: " message, ##__VA_ARGS__);                             \
+      ERROR("File: %s, Line: %d, Fail Expression: (%s)", __FILE__, __LINE__, \
+            #expression);                                                      \
+    }                                                                          \
+  } while (0);
+
+#define EXIT_IF(expression, message, ...)                                  \
+  do {                                                                     \
+    if ((expression)) {                                                    \
+      ERROR("Fail: " message, ##__VA_ARGS__);                         \
+      ERROR("File: %s, Line: %d, Unexpected Expression: (%s)", __FILE__, \
+            __LINE__, #expression);                                        \
+      exit(1);                                                             \
+    }                                                                      \
+  } while (0);
+
+// end happyntrain
 }
