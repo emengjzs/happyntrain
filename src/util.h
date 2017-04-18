@@ -12,6 +12,11 @@ namespace happyntrain {
 template <typename Object>
 using Ref = std::shared_ptr<Object>;
 
+template <class T, typename... Vars>
+inline Ref<T> newInstance(Vars... args) {
+  return std::make_shared<T>(args...);
+}
+
 template <typename Object>
 using Ptr = std::unique_ptr<Object>;
 
