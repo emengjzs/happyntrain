@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <memory>
 
 #include "logging.h"
@@ -9,16 +10,16 @@ namespace happyntrain {
 // -------------------------
 // memory
 // -------------------------
-template <typename Object>
-using Ref = std::shared_ptr<Object>;
+template <class T>
+using Ref = std::shared_ptr<T>;
 
 template <class T, typename... Vars>
 inline Ref<T> newInstance(Vars... args) {
   return std::make_shared<T>(args...);
 }
 
-template <typename Object>
-using Ptr = std::unique_ptr<Object>;
+template <class T>
+using Ptr = std::unique_ptr<T>;
 
 // -------------------------
 // Effective C++
@@ -58,6 +59,16 @@ class NoCopy {
       exit(1);                                                           \
     }                                                                    \
   } while (0);
+
+//------------------------
+// c struct
+//-------------------------
+template <typename T>
+inline T c_struct_init() {
+  T t;
+  memset(&t, 0, sizeof(t));
+  return t;
+}
 
 // end happyntrain
 }
