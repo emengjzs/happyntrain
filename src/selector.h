@@ -10,17 +10,21 @@ const int kMaxSelectEvents = 2000;
 
 template <typename SelectorImpt>
 class Selector : NoCopy {
-  SelectorImpt _selector;
   int64_t _id;
 
  public:
-  template <typename... Vars>
-  Selector(Vars&&... args) : _id(GetNewId()), _selector(args...) {}
-  ~Selector() {}
+  Selector() : _id(GetNewId()) {}
+  ~Selector() {  }
 
-  inline void AddChannel() { _selector.AddChannel(); }
-  inline void RemoveChannel() { _selector.RemoveChannel(); }
-  inline void UpdateChannel() { _selector.UpdateChannel(); }
+  inline void AddChannel() { static_cast<SelectorImpt*>(this)->AddChannel(); }
+
+  inline void RemoveChannel() {
+    static_cast<SelectorImpt*>(this)->RemoveChannel();
+  }
+
+  inline void UpdateChannel() {
+    static_cast<SelectorImpt*>(this)->UpdateChannel();
+  }
 
  private:
   static int64_t GetNewId() {
