@@ -6,6 +6,8 @@
 
 namespace happyntrain {
 
+const int kMaxSelectEvents = 2000;
+
 template <typename SelectorImpt>
 class Selector : NoCopy {
   SelectorImpt _selector;
