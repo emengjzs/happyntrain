@@ -10,7 +10,6 @@ namespace happyntrain {
 using Runnable = std::function<void()>;
 
 class EventLoop : NoCopy {
- 
  public:
   explicit EventLoop(int taskCapacity);
   ~EventLoop();
@@ -36,4 +35,6 @@ class EventLoop : NoCopy {
 class EventLoopGroup : NoCopy {};
 
 class Channel : NoCopy {};
+
+// end happyntrain
 }

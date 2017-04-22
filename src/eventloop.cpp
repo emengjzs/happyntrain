@@ -1,44 +1,29 @@
 #include "eventloop.h"
 
-using namesapce std;
+using namespace std;
 
-class EventLoopImpt : Nocopy {
-
-  public:
-};
+namespace happyntrain {
 
 // --------------------------
 // EventLoop
 // --------------------------
-EventLoop::EventLoop(int taskCapacity) {
-  
-}
+EventLoop::EventLoop(int taskCapacity) {}
 
-EventLoop::~EventLoop(){
-
-}
+EventLoop::~EventLoop() {}
 
 // Handle the evnetLoop once;
-void EventLoop::LoopOnce() {
-
-}
+void EventLoop::LoopOnce() {}
 
 // Start the eventloop
-void EventLoop::Loop() {
-
-}
+void EventLoop::Loop() {}
 
 // Shut down the eventloop
-void EventLoop::ShutDown() {
-
-}
+void EventLoop::ShutDown() {}
 
 // Submit a Runnable task
-void EventLoop::SubmitTask(const Runnable& task) {
-
-}
+void EventLoop::SubmitTask(const Runnable& task) {}
 
 // ??
-void EventLoop::WakeUp() {
+void EventLoop::WakeUp() {}
 
-}
+}  // end happyntrain
