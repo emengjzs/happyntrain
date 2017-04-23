@@ -1,28 +1,34 @@
 #pragma once
+#if defined(__linux__)
 
 #include <set>
 
 #include <sys/epoll.h>
 
-#include "eventloop.h"
-#include "selector.h"
-#include "util.h"
+#include "selector-base.h"
 
 namespace happyntrain {
 
-class EpollSelector : public Selector<EpollSelector> {
+class Channel;
+
+class EpollSelector {
+  int64_t _id;
   int _epoll_fd;
   std::set<Channel*> _activeChannels;
   struct epoll_event _activeEvents[kMaxSelectEvents];
+
+  struct epoll_event GetEpollEvent(Channel* channel) const;
 
  public:
   explicit EpollSelector(int i);
   ~EpollSelector();
 
-  void AddChannel();
-  void RemoveChannel();
-  void UpdateChannel();
+  void AddChannel(Channel* channel);
+  void RemoveChannel(Channel* channel);
+  void UpdateChannel(Channel* channel);
 };
 
-using NIOSelector = EpollSelector;
+// end happyntrain
 }
+
+#endif
