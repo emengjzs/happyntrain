@@ -14,7 +14,7 @@ class Selector : NoCopy {
 
  public:
   Selector() : _id(GetNewId()) {}
-  ~Selector() {  }
+  ~Selector() {}
 
   inline void AddChannel() { static_cast<SelectorImpt*>(this)->AddChannel(); }
 
@@ -32,6 +32,10 @@ class Selector : NoCopy {
     return id++;
   }
 };
+
+#if defined(__linux__)
+#include "epoll-selector.h"
+#endif
 
 // end happyntrain
 }
