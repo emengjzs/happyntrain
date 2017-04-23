@@ -23,4 +23,6 @@ class EpollSelector : public Selector<EpollSelector> {
   void RemoveChannel();
   void UpdateChannel();
 };
+
+using NIOSelector = EpollSelector;
 }
