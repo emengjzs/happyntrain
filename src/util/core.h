@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstring>
 #include <memory>
 
@@ -69,6 +70,22 @@ inline T c_struct_init() {
   memset(&t, 0, sizeof(t));
   return t;
 }
+
+// -----------------------
+// atomic counter
+// -----------------------
+template <class T = uint64_t>
+class SequenceCreator {
+  std::atomic<T> _id;
+
+ public:
+  explicit SequenceCreator(T id) : _id(id) {}
+  ~SequenceCreator() {}
+  SequenceCreator() : SequenceCreator(0) {}
+
+  T GetNextId() { return ++_id; }
+  T operator()() { return GetNextId(); }
+};
 
 // end happyntrain
 }
