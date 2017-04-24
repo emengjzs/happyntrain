@@ -76,14 +76,14 @@ inline T c_struct_init() {
 // -----------------------
 template <class T = uint64_t>
 class SequenceCreator {
-  std::atomic<T> _id;
+  std::atomic<T> id_;
 
  public:
-  explicit SequenceCreator(T id) : _id(id) {}
+  explicit SequenceCreator(T id) : id_(id) {}
   ~SequenceCreator() {}
   SequenceCreator() : SequenceCreator(0) {}
 
-  T GetNextId() { return ++_id; }
+  T GetNextId() { return ++id_; }
   T operator()() { return GetNextId(); }
 };
 

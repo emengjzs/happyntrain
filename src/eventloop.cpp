@@ -1,5 +1,7 @@
 #include "eventloop.h"
+
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "selector.h"
 #include "util/net.h"
@@ -32,13 +34,24 @@ void EventLoop::SubmitTask(const Runnable& task) {}
 void EventLoop::WakeUp() {}
 
 //
+class Channel;
 
-SequenceCreator<uint64_t> Channel::_next_id(0);
+SequenceCreator<uint64_t> Channel::next_id_(0);
 
-Channel::Channel(Selector* selector, int fd) : _socket_fd(fd), _id(_next_id()) {
-  int errcode = network::setNonBlock(_socket_fd);
-  EXPECT(errcode == 0, "fd %d cannot set nonblock.", _socket_fd);
-  _selector->AddChannel(this);
+Channel::Channel(Selector* selector, int fd) : socket_fd_(fd), id_(next_id_()) {
+  int errcode = network::setNonBlock(socket_fd_);
+  EXPECT(errcode == 0, "fd %d cannot set nonblock.", socket_fd_);
+  selector_->AddChannel(this);
+}
+
+void Channel::Close() {
+  if (socket_fd_ > 0) {
+    DEBUG("Closing Channel %lu (fd: %d)", id_, socket_fd_);
+    selector_->RemoveChannel(this);
+    ::close(socket_fd_);
+    socket_fd_ = -1;
+    EmitReadable();
+  }
 }
 
 }  // end happyntrain

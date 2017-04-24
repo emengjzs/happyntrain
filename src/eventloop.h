@@ -38,19 +38,19 @@ class EventLoop : NoCopy {
 class EventLoopGroup : NoCopy {};
 
 class Channel : NoCopy {
-  // _next_id(0)
-  static SequenceCreator<uint64_t> _next_id;
+  // next_id_(0)
+  static SequenceCreator<uint64_t> next_id_;
 
-  Selector* _selector;
-  int _socket_fd;
-  uint64_t _id;
-  short _events_flag;
-  Runnable _read_handler;
-  Runnable _write_handler;
-  Runnable _error_handler;
+  Selector* selector_;
+  int socket_fd_;
+  uint64_t id_;
+  short events_flag_;
+  Runnable read_handler_;
+  Runnable write_handler_;
+  Runnable error_handler_;
 
   Channel& SetEventsFlag(const int flag, bool enable) {
-    _events_flag = enable ? _events_flag | flag : _events_flag & (~flag);
+    events_flag_ = enable ? events_flag_ | flag : events_flag_ & (~flag);
     return *this;
   }
 
@@ -61,12 +61,12 @@ class Channel : NoCopy {
   Channel(Selector* selector, int fd);
   ~Channel() { Close(); }
 
-  uint64_t id() const { return _id; }
-  int fd() const { return _socket_fd; }
-  int events() const { return _events_flag; }
+  uint64_t id() const { return id_; }
+  int fd() const { return socket_fd_; }
+  int events() const { return events_flag_; }
 
-  bool IsReadEnabled() const { return _events_flag & kReadEventFlag; }
-  bool IsWriteEnabled() const { return _events_flag & kReadEventFlag; }
+  bool IsReadEnabled() const { return events_flag_ & kReadEventFlag; }
+  bool IsWriteEnabled() const { return events_flag_ & kReadEventFlag; }
 
   Channel& SetReadEnable(bool enable = true) {
     return SetEventsFlag(kReadEventFlag, enable);
@@ -77,17 +77,21 @@ class Channel : NoCopy {
   }
 
   Channel& OnWrite(const Runnable& onwrite) {
-    _write_handler = onwrite;
+    write_handler_ = onwrite;
     return *this;
   }
 
   Channel& OnRead(const Runnable& onread) {
-    _read_handler = onread;
+    read_handler_ = onread;
     return *this;
   }
+
+  void EmitReadable() { read_handler_(); }
+  void EmitWritable() { write_handler_(); }
 
   void Close();
 };
 
 // end happyntrain
 }
+

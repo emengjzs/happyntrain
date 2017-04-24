@@ -11,48 +11,52 @@ using namespace std;
 
 namespace happyntrain {
 
-struct epoll_event EpollSelector::GetEpollEvent(Channel* channel) const {
+class EpollSelector;
+
+struct epoll_event EpollSelector::GetEpollEvent(Channel* channel) {
   struct epoll_event ev = c_struct_init<struct epoll_event>();
   ev.events = channel->events();
   ev.data.ptr = static_cast<void*>(channel);
   return ev;
 }
 
-EpollSelector::EpollSelector(int i) : _id(GetNewSelectorId()) {
+EpollSelector::EpollSelector(int i) : id_(GetNewSelectorId()) {
   DEBUG("param: %d", i);
   // FD_CLOEXEC
-  _epoll_fd = epoll_create1(EPOLL_CLOEXEC);
-  EXPECT(_epoll_fd > 0, "epoll create failed");
-  INFO("epoll %d created.", _epoll_fd);
+  epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
+  EXPECT(epoll_fd_ > 0, "epoll create failed");
+  INFO("epoll %d created.", epoll_fd_);
 }
 
 EpollSelector::~EpollSelector() {
-  ::close(_epoll_fd);
-  INFO("epoll %d destroyed.", _epoll_fd);
+  ::close(epoll_fd_);
+  INFO("epoll %d destroyed.", epoll_fd_);
 }
 
 void EpollSelector::AddChannel(Channel* channel) {
   DEBUG("Add Channel %lu (fd:%d) to Selector %lu", channel->id(), channel->fd(),
-        this->_id);
+        this->id_);
   struct epoll_event event = GetEpollEvent(channel);
-  int r = epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, channel->fd(), &event);
+  int r = epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, channel->fd(), &event);
   EXPECT(r == 0, "EPOLL_CTL_ADD Failed");
-  _activeChannels.insert(channel);
+  activeChannels_.insert(channel);
 }
 
 void EpollSelector::RemoveChannel(Channel* channel) {
   DEBUG("Remove Channel %lu (fd:%d) to Selector %lu", channel->id(),
-        channel->fd(), this->_id);
-  _activeChannels.erase(channel);
+        channel->fd(), this->id_);
+  activeChannels_.erase(channel);
 }
 
 void EpollSelector::UpdateChannel(Channel* channel) {
   DEBUG("Update Channel %lu (fd:%d) to Selector %lu", channel->id(),
-        channel->fd(), this->_id);
+        channel->fd(), this->id_);
   struct epoll_event event = GetEpollEvent(channel);
-  int r = epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, channel->fd(), &event);
+  int r = epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, channel->fd(), &event);
   EXPECT(r == 0, "EPOLL_CTL_MOD Failed");
 }
+
+// end happyntrain
 }
 
-#endif 
+#endif

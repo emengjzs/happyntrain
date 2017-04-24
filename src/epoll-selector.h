@@ -12,12 +12,12 @@ namespace happyntrain {
 class Channel;
 
 class EpollSelector {
-  int64_t _id;
-  int _epoll_fd;
-  std::set<Channel*> _activeChannels;
-  struct epoll_event _activeEvents[kMaxSelectEvents];
+  int64_t id_;
+  int epoll_fd_;
+  std::set<Channel*> activeChannels_;
+  struct epoll_event activeEvents_[kMaxSelectEvents];
 
-  struct epoll_event GetEpollEvent(Channel* channel) const;
+  static inline struct epoll_event GetEpollEvent(Channel* channel);
 
  public:
   explicit EpollSelector(int i);
