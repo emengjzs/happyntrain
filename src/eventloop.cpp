@@ -13,6 +13,7 @@ namespace happyntrain {
 // --------------------------
 // EventLoop
 // --------------------------
+class EventLoop;
 
 EventLoop::EventLoop(int taskCapacity) {}
 

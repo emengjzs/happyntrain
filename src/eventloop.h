@@ -13,6 +13,8 @@ namespace happyntrain {
 using Runnable = std::function<void()>;
 
 class EventLoop : NoCopy {
+  Selector* selector_;
+
  public:
   explicit EventLoop(int taskCapacity);
   ~EventLoop();
@@ -51,12 +53,13 @@ class Channel : NoCopy {
 
   Channel& SetEventsFlag(const int flag, bool enable) {
     events_flag_ = enable ? events_flag_ | flag : events_flag_ & (~flag);
+    selector_->UpdateChannel(this);
     return *this;
   }
 
  public:
-  const int kReadEventFlag = POLLIN;
-  const int kWriteEventFlag = POLLOUT;
+  static const int kReadEventFlag = POLLIN;
+  static const int kWriteEventFlag = POLLOUT;
 
   Channel(Selector* selector, int fd);
   ~Channel() { Close(); }
@@ -94,4 +97,3 @@ class Channel : NoCopy {
 
 // end happyntrain
 }
-
