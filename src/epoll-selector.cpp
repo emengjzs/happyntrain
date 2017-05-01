@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "eventloop.h"
+#include "util/time.h"
 
 using namespace std;
 
@@ -29,6 +30,10 @@ EpollSelector::EpollSelector(int i) : id_(GetNewSelectorId()) {
 }
 
 EpollSelector::~EpollSelector() {
+  while (!active_channels_.empty()) {
+    // Channel will delete himself from channel set automatically.
+    (*active_channels_.begin())->Close();
+  }
   ::close(epoll_fd_);
   INFO("epoll %d destroyed.", epoll_fd_);
 }
@@ -39,13 +44,13 @@ void EpollSelector::AddChannel(Channel* channel) {
   struct epoll_event event = GetEpollEvent(channel);
   int r = epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, channel->fd(), &event);
   EXPECT(r == 0, "EPOLL_CTL_ADD Failed");
-  activeChannels_.insert(channel);
+  active_channels_.insert(channel);
 }
 
 void EpollSelector::RemoveChannel(Channel* channel) {
   DEBUG("Remove Channel %lu (fd:%d) to Selector %lu", channel->id(),
         channel->fd(), this->id_);
-  activeChannels_.erase(channel);
+  active_channels_.erase(channel);
 }
 
 void EpollSelector::UpdateChannel(Channel* channel) {
@@ -54,6 +59,33 @@ void EpollSelector::UpdateChannel(Channel* channel) {
   struct epoll_event event = GetEpollEvent(channel);
   int r = epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, channel->fd(), &event);
   EXPECT(r == 0, "EPOLL_CTL_MOD Failed");
+}
+
+void EpollSelector::SelectOnce(int wait_ms) {
+  auto begin = time::time_begin();
+  last_active_event_idx_ =
+      epoll_wait(epoll_fd_, active_events_, kMaxSelectEvents, wait_ms);
+  time::time_end(begin, "Epoll Select: %d events", last_active_event_idx_);
+  EXPECT(last_active_event_idx_ >= 0, "Epoll Error: return %d",
+         last_active_event_idx_);
+  for (int i = --last_active_event_idx_; i >= 0;
+       i--, last_active_event_idx_--) {
+    Channel* channel = static_cast<Channel*>(active_events_[i].data.ptr);
+    int events = active_events_[i].events;
+    if (channel) {
+      if (events & (Channel::kReadEventFlag | POLLERR)) {
+        DEBUG("Channel [%lu] FD [%d] EVENT READ", channel->id(), channel->fd());
+        channel->EmitReadable();
+      } else if (events & Channel::kWriteEventFlag) {
+        DEBUG("Channel [%lu] FD [%d] EVENT WRITE", channel->id(),
+              channel->fd());
+        channel->EmitWritable();
+      } else {
+        ERROR("Channel [%lu] FD [%d] EVENT UKNOWN %4x", channel->id(),
+              channel->fd(), channel->events());
+      }
+    }
+  }
 }
 
 // end happyntrain

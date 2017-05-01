@@ -11,11 +11,12 @@ namespace happyntrain {
 
 class Channel;
 
-class EpollSelector {
+class EpollSelector : NoCopy {
   int64_t id_;
   int epoll_fd_;
-  std::set<Channel*> activeChannels_;
-  struct epoll_event activeEvents_[kMaxSelectEvents];
+  int last_active_event_idx_;
+  std::set<Channel*> active_channels_;
+  struct epoll_event active_events_[kMaxSelectEvents];
 
   static inline struct epoll_event GetEpollEvent(Channel* channel);
 
@@ -26,6 +27,9 @@ class EpollSelector {
   void AddChannel(Channel* channel);
   void RemoveChannel(Channel* channel);
   void UpdateChannel(Channel* channel);
+
+  // Wait events for almost wait_ms ms.
+  void SelectOnce(int wait_ms);
 };
 
 // end happyntrain
