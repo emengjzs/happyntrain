@@ -26,11 +26,12 @@ using Ptr = std::unique_ptr<T>;
 // Effective C++
 // -------------------------
 // macro
-#define DISABLE_COPY(Class)     \
- private:                       \
-  Class(const Class&) = delete; \
-  Class(Class&&) = delete;      \
-  Class& operator=(const Class&) = delete;
+#define DISABLE_COPY(Class)                \
+ private:                                  \
+  Class(const Class&) = delete;            \
+  Class(Class&&) = delete;                 \
+  Class& operator=(const Class&) = delete; \
+  Class& operator=(const Class&&) = delete;
 
 // zero-cost class
 class NoCopy {
