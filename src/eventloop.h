@@ -2,9 +2,11 @@
 
 #include <poll.h>
 
+#include <atomic>
 #include <functional>
 
 #include "selector.h"
+#include "util/concurrent.h"
 #include "util/core.h"
 
 namespace happyntrain {
@@ -13,7 +15,29 @@ namespace happyntrain {
 using Runnable = std::function<void()>;
 
 class EventLoop : NoCopy {
-  Selector* selector_;
+ private:
+  Ptr<Selector> selector_;
+  // A singal to turnoff eventloop
+  std::atomic<bool> terminate_;
+
+  concurrent::LinkedBlockingQueue<Runnable> taskQueue_;
+
+  class WakeUpHandler : NoCopy {
+    Channel* eventChannel_;
+    EventLoop* eventLoop_;
+    bool wakeUp_;
+
+   public:
+    explicit WakeUpHandler();
+    ~WakeUpHandler() {}
+    void Init(EventLoop* eventLoop);
+    void WakeUp();
+    void OnRead();
+  };
+
+  WakeUpHandler wakeUpHandler_;
+
+  void InitWakeUpEventChannel();
 
  public:
   explicit EventLoop(int taskCapacity);
@@ -34,6 +58,8 @@ class EventLoop : NoCopy {
   // ??
   void WakeUp();
 
+  void CompleteTasks();
+
  private:
 };
 
@@ -52,8 +78,10 @@ class Channel : NoCopy {
   Runnable error_handler_;
 
   Channel& SetEventsFlag(const int flag, bool enable) {
+    DEBUG("%04x", events_flag_);
     events_flag_ = enable ? events_flag_ | flag : events_flag_ & (~flag);
     selector_->UpdateChannel(this);
+    DEBUG("%04x", events_flag_);
     return *this;
   }
 
@@ -69,7 +97,7 @@ class Channel : NoCopy {
   int events() const { return events_flag_; }
 
   bool IsReadEnabled() const { return events_flag_ & kReadEventFlag; }
-  bool IsWriteEnabled() const { return events_flag_ & kReadEventFlag; }
+  bool IsWriteEnabled() const { return events_flag_ & kWriteEventFlag; }
 
   Channel& SetReadEnable(bool enable = true) {
     return SetEventsFlag(kReadEventFlag, enable);
