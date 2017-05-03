@@ -43,6 +43,7 @@ class LinkedBlockingQueue : NoCopy {
 
   inline std::size_t size() const { return size_.load(); }
   inline std::size_t capacity() const { return capacity_; }
+  inline bool empty() const { return size_ == 0; }
 };
 
 template <class T>
