@@ -2,6 +2,7 @@
 #include <set>
 #include <string>
 
+#include "src/eventloop.h"
 #include "src/selector.h"
 #include "src/util/concurrent.h"
 #include "src/util/core.h"
@@ -18,11 +19,9 @@ struct A {
 };
 
 int main() {
-  Ref<Selector> integer = newInstance<Selector>(2);
-  { Ptr<Selector> a2(new Selector(2)); }
+  EventLoop eventloop(0);
   set<int> fuckset;
   fuckset.insert(1);
-  Selector s(1);
   LinkedBlockingQueue<A> queue;
   queue.Push(A(1, "fuck"));
   DEBUG("%d", queue.Pop().a);
