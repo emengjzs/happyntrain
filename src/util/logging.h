@@ -10,6 +10,7 @@ namespace happyntrain {
 
 #define INFO(message, ...) LOG(message, "INFO", ##__VA_ARGS__);
 #define DEBUG(message, ...) LOG(message, "DEBUG", ##__VA_ARGS__);
+#define WARN(message, ...) LOG(message, "WARN", ##__VA_ARGS__);
 #define ERROR(message, ...) \
   LOG("\x1b[31m" message "\x1b[0m", "ERROR", ##__VA_ARGS__);
 
