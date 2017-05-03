@@ -26,7 +26,7 @@ EpollSelector::EpollSelector(int i) : id_(GetNewSelectorId()) {
   // FD_CLOEXEC
   epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
   EXPECT(epoll_fd_ > 0, "epoll create failed");
-  INFO("epoll %d created.", epoll_fd_);
+  INFO("+ epollfd(%d)", epoll_fd_);
 }
 
 EpollSelector::~EpollSelector() {
@@ -35,12 +35,13 @@ EpollSelector::~EpollSelector() {
     (*active_channels_.begin())->Close();
   }
   ::close(epoll_fd_);
-  INFO("epoll %d destroyed.", epoll_fd_);
+  INFO("- epollfd(%d)", epoll_fd_);
 }
 
 void EpollSelector::AddChannel(Channel* channel) {
-  DEBUG("Add Channel %lu (fd:%d) to Selector %lu", channel->id(), channel->fd(),
-        this->id_);
+  DEBUG("+ Channel(%lu) fd(%d) read(%d) write(%d) => Selector(%lu)",
+        channel->id(), channel->fd(), channel->IsReadEnabled(),
+        channel->IsWriteEnabled(), this->id_);
   struct epoll_event event = GetEpollEvent(channel);
   int r = epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, channel->fd(), &event);
   EXPECT(r == 0, "EPOLL_CTL_ADD Failed");
@@ -48,14 +49,15 @@ void EpollSelector::AddChannel(Channel* channel) {
 }
 
 void EpollSelector::RemoveChannel(Channel* channel) {
-  DEBUG("Remove Channel %lu (fd:%d) to Selector %lu", channel->id(),
-        channel->fd(), this->id_);
+  DEBUG("- Channel(%lu) fd(%d) => Selector(%lu)", channel->id(), channel->fd(),
+        this->id_);
   active_channels_.erase(channel);
 }
 
 void EpollSelector::UpdateChannel(Channel* channel) {
-  DEBUG("Update Channel %lu (fd:%d) to Selector %lu", channel->id(),
-        channel->fd(), this->id_);
+  DEBUG("* Channel(%lu) fd(%d) read(%d) write(%d) => Selector(%lu)",
+        channel->id(), channel->fd(), channel->IsReadEnabled(),
+        channel->IsWriteEnabled(), this->id_);
   struct epoll_event event = GetEpollEvent(channel);
   int r = epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, channel->fd(), &event);
   EXPECT(r == 0, "EPOLL_CTL_MOD Failed");

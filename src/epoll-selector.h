@@ -24,6 +24,8 @@ class EpollSelector : NoCopy {
   explicit EpollSelector(int i);
   ~EpollSelector();
 
+  int64_t id() const { return id_; }
+
   void AddChannel(Channel* channel);
   void RemoveChannel(Channel* channel);
   void UpdateChannel(Channel* channel);
