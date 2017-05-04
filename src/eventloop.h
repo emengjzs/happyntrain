@@ -3,24 +3,22 @@
 #include <poll.h>
 
 #include <atomic>
-#include <functional>
 
 #include "selector.h"
+#include "timertask.h"
 #include "util/concurrent.h"
 #include "util/core.h"
 
 namespace happyntrain {
-
-// Interface : () => void
-using Runnable = std::function<void()>;
 
 class EventLoop : NoCopy {
  private:
   Ptr<Selector> selector_;
   // A singal to turnoff eventloop
   std::atomic<bool> terminate_;
-
-  concurrent::LinkedBlockingQueue<Runnable> taskQueue_;
+  int32_t selectCycleMs_;
+  concurrent::LinkedBlockingQueue<concurrent::Runnable> taskQueue_;
+  timer::TimerTaskManager timerTaskManager_;
 
   class WakeUpHandler : NoCopy {
     Channel* eventChannel_;
@@ -38,6 +36,8 @@ class EventLoop : NoCopy {
   WakeUpHandler wakeUpHandler_;
 
   void InitWakeUpEventChannel();
+  void CompleteTasks();
+  inline void CompleteTimerTasks();
 
  public:
   explicit EventLoop(int taskCapacity);
@@ -47,18 +47,16 @@ class EventLoop : NoCopy {
   void LoopOnce();
 
   // Start the eventloop
-  void Loop();
+  void Run();
 
   // Shut down the eventloop
   void ShutDown();
 
-  // Submit a Runnable task
-  void SubmitTask(const Runnable& task);
+  // Submit a Runnable task, run it after delayMs ms.
+  timer::TaskId SubmitTask(uint64_t delayMs, concurrent::Runnable&& task);
 
   // ??
   void WakeUp();
-
-  void CompleteTasks();
 
  private:
 };
@@ -73,9 +71,9 @@ class Channel : NoCopy {
   int socket_fd_;
   uint64_t id_;
   short events_flag_;
-  Runnable read_handler_;
-  Runnable write_handler_;
-  Runnable error_handler_;
+  concurrent::Runnable read_handler_;
+  concurrent::Runnable write_handler_;
+  concurrent::Runnable error_handler_;
 
   Channel& SetEventsFlag(const int flag, bool enable) {
     DEBUG("%04x", events_flag_);
@@ -107,12 +105,12 @@ class Channel : NoCopy {
     return SetEventsFlag(kWriteEventFlag, enable);
   }
 
-  Channel& OnWrite(const Runnable& onwrite) {
+  Channel& OnWrite(const concurrent::Runnable& onwrite) {
     write_handler_ = onwrite;
     return *this;
   }
 
-  Channel& OnRead(const Runnable& onread) {
+  Channel& OnRead(const concurrent::Runnable& onread) {
     read_handler_ = onread;
     return *this;
   }

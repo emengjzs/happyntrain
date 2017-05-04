@@ -3,7 +3,10 @@
 #include <fcntl.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
+
+#include <algorithm>
 #include <functional>
+#include <utility>
 
 #include "selector.h"
 #include "util/logging.h"
@@ -11,6 +14,7 @@
 
 using namespace std;
 using namespace happyntrain::concurrent;
+using namespace happyntrain::timer;
 
 namespace happyntrain {
 
@@ -22,7 +26,8 @@ EventLoop::EventLoop(int taskCapacity)
     : selector_(CreateNewSelector()),
       terminate_(false),
       taskQueue_(),
-      wakeUpHandler_() {
+      wakeUpHandler_(),
+      timerTaskManager_() {
   InitWakeUpEventChannel();
 }
 
@@ -31,16 +36,27 @@ EventLoop::~EventLoop() {}
 void EventLoop::InitWakeUpEventChannel() { wakeUpHandler_.Init(this); }
 
 // Handle the evnetLoop once;
-void EventLoop::LoopOnce() {}
+void EventLoop::LoopOnce() {
+  int select_wait_time = min(int64_t(1000), timerTaskManager_.GetNextTimeout());
+  DEBUG("wait_time(%d ms)", select_wait_time);
+  selector_->SelectOnce(select_wait_time);
+  CompleteTimerTasks();
+}
 
 // Start the eventloop
-void EventLoop::Loop() {}
+void EventLoop::Run() {
+  while (!terminate_) {
+    LoopOnce();
+  }
+}
 
 // Shut down the eventloop
 void EventLoop::ShutDown() {}
 
 // Submit a Runnable task
-void EventLoop::SubmitTask(const Runnable& task) {}
+TaskId EventLoop::SubmitTask(uint64_t delayMs, Runnable&& task) {
+  return timerTaskManager_.AddTask(std::forward<Runnable>(task), delayMs);
+}
 
 // ??
 void EventLoop::WakeUp() {}
@@ -50,6 +66,11 @@ void EventLoop::CompleteTasks() {
     taskQueue_.Pop()();
   }
 }
+
+void EventLoop::CompleteTimerTasks() {
+  timerTaskManager_.ExecuteTimeoutTasks();
+}
+
 // -----------------------
 class WakeUpHandler;
 // -------------------------
