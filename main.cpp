@@ -25,5 +25,8 @@ int main() {
   LinkedBlockingQueue<A> queue;
   queue.Push(A(1, "fuck"));
   DEBUG("%d", queue.Pop().a);
+  eventloop.SubmitTask(10000, []() { INFO("Hello, world!"); });
+  eventloop.SubmitTask(20000, []() { INFO("Fuck you!"); });
+  eventloop.Run();
   return 0;
 }
