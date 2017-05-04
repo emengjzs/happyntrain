@@ -76,15 +76,16 @@ void EpollSelector::SelectOnce(int wait_ms) {
     int events = active_events_[i].events;
     if (channel) {
       if (events & (Channel::kReadEventFlag | POLLERR)) {
-        DEBUG("Channel [%lu] FD [%d] EVENT READ", channel->id(), channel->fd());
+        DEBUG("Channel(%lu) fd(%d) READ(%04x)", channel->id(), channel->fd(),
+              channel->events());
         channel->EmitReadable();
       } else if (events & Channel::kWriteEventFlag) {
-        DEBUG("Channel [%lu] FD [%d] EVENT WRITE", channel->id(),
-              channel->fd());
+        DEBUG("Channel(%lu) fd(%d) WRITE(%04x)", channel->id(), channel->fd(),
+              channel->events());
         channel->EmitWritable();
       } else {
-        ERROR("Channel [%lu] FD [%d] EVENT UKNOWN %4x", channel->id(),
-              channel->fd(), channel->events());
+        ERROR("Channel(%lu) fd(%d) UKNOWN(%04x)", channel->id(), channel->fd(),
+              channel->events());
       }
     }
   }
