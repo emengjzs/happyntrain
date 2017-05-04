@@ -2,11 +2,17 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <functional>
 #include <list>
 #include <mutex>
 
+#include "core.h"
+
 namespace happyntrain {
 namespace concurrent {
+
+// Interface : () => void
+using Runnable = std::function<void()>;
 
 template <class T>
 class LinkedBlockingQueue : NoCopy {
