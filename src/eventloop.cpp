@@ -40,7 +40,7 @@ void EventLoop::LoopOnce() {
   int select_wait_time = min(int64_t(1000), timerTaskManager_.GetNextTimeout());
   DEBUG("wait_time(%d ms)", select_wait_time);
   selector_->SelectOnce(select_wait_time);
-  CompleteTimerTasks();
+  timerTaskManager_.ExecuteTimeoutTasks();
 }
 
 // Start the eventloop
@@ -51,15 +51,21 @@ void EventLoop::Run() {
 }
 
 // Shut down the eventloop
-void EventLoop::ShutDown() {}
+void EventLoop::ShutDown() {
+  terminate_ = true;
+  WakeUp();
+}
 
 // Submit a Runnable task
 TaskId EventLoop::SubmitTask(uint64_t delayMs, Runnable&& task) {
   return timerTaskManager_.AddTask(std::forward<Runnable>(task), delayMs);
 }
 
-// ??
-void EventLoop::WakeUp() {}
+void EventLoop::SubmitTask(concurrent::Runnable&& task) {
+  DEBUG("+ Task(%p)", &task);
+  taskQueue_.Push(std::forward<Runnable>(task));
+  WakeUp();
+}
 
 void EventLoop::CompleteTasks() {
   while (!taskQueue_.empty()) {
@@ -67,9 +73,8 @@ void EventLoop::CompleteTasks() {
   }
 }
 
-void EventLoop::CompleteTimerTasks() {
-  timerTaskManager_.ExecuteTimeoutTasks();
-}
+// Wake up the eventloop to complete the task submitted.
+void EventLoop::WakeUp() { wakeUpHandler_.WakeUp(); }
 
 // -----------------------
 class WakeUpHandler;
@@ -82,7 +87,7 @@ void EventLoop::WakeUpHandler::Init(EventLoop* eventLoop) {
   int efd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
   EXPECT(efd > 0, "Event fd create failed.");
   INFO("+ eventfd(%d)", efd);
-  eventChannel_ = new Channel(eventLoop->selector_.get(), efd);
+  eventChannel_ = Ptr<Channel>(new Channel(eventLoop->selector_.get(), efd));
   eventChannel_->SetReadEnable().OnRead(
       bind(&EventLoop::WakeUpHandler::OnRead, this));
 }
