@@ -22,6 +22,12 @@ inline Ref<T> newInstance(Vars... args) {
 template <class T>
 using Ptr = std::unique_ptr<T>;
 
+template <class T>
+using Sharable = std::enable_shared_from_this<T>;
+
+template <class T>
+using WeakRef = std::weak_ptr<T>;
+
 // -------------------------
 // Effective C++
 // -------------------------
