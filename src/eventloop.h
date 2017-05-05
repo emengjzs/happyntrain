@@ -21,7 +21,7 @@ class EventLoop : NoCopy {
   timer::TimerTaskManager timerTaskManager_;
 
   class WakeUpHandler : NoCopy {
-    Channel* eventChannel_;
+    Ptr<Channel> eventChannel_;
     EventLoop* eventLoop_;
     bool wakeUp_;
 
@@ -37,7 +37,6 @@ class EventLoop : NoCopy {
 
   void InitWakeUpEventChannel();
   void CompleteTasks();
-  inline void CompleteTimerTasks();
 
  public:
   explicit EventLoop(int taskCapacity);
@@ -55,7 +54,10 @@ class EventLoop : NoCopy {
   // Submit a Runnable task, run it after delayMs ms.
   timer::TaskId SubmitTask(uint64_t delayMs, concurrent::Runnable&& task);
 
-  // ??
+  // Submit a Runnable task, thread-safe
+  void SubmitTask(concurrent::Runnable&& task);
+
+  // Wake up the eventloop to complete the task submitted.
   void WakeUp();
 
  private:
