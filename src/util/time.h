@@ -10,6 +10,7 @@ namespace happyntrain {
 namespace time {
 
 using microseconds = std::chrono::microseconds;
+using us = std::chrono::microseconds;
 using milliseconds = std::chrono::milliseconds;
 using ms = std::chrono::milliseconds;
 using seconds = std::chrono::seconds;
@@ -34,8 +35,19 @@ template <typename... Vars>
 inline void time_end(const clock_t begin, const char* message, Vars&&... args) {
   printf("Task: ");
   printf(message, args...);
-  printf(" -- %.2fs\n", double(std::clock() - begin) / CLOCKS_PER_SEC);
+  printf(" -- %.2fs\n", (double)(std::clock() - begin) / 1000);
 }
+
+// Use RAII for timing
+class timing {
+  clock_t begin_;
+  const std::string msg_;
+
+ public:
+  timing(std::string&& msg) : begin_(std::clock()), msg_(msg) {}
+  ~timing() { time_end(begin_, "%s", msg_.c_str()); }
+};
+
 // end time
 }
 // end happyntrain
