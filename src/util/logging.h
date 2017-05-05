@@ -4,6 +4,10 @@
 
 namespace happyntrain {
 
+#ifndef __FILENAME__
+#define __FILENAME__ __FILE__
+#endif
+
 #define LOG(message, level, ...)                                     \
   printf("[%5s] %s-%d " message "\n", level, __FILENAME__, __LINE__, \
          ##__VA_ARGS__);
