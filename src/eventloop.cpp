@@ -127,18 +127,18 @@ class Channel;
 SequenceCreator<uint64_t> Channel::next_id_(0);
 
 Channel::Channel(Selector* selector, int fd)
-    : selector_(selector), socket_fd_(fd), id_(next_id_()), events_flag_(0) {
-  int errcode = network::setNonBlock(socket_fd_);
-  EXPECT(errcode == 0, "fd %d cannot set nonblock.", socket_fd_);
+    : selector_(selector), fd_(fd), id_(next_id_()), events_flag_(0) {
+  int errcode = network::setNonBlock(fd_);
+  EXPECT(errcode == 0, "fd %d cannot set nonblock.", fd_);
   selector_->AddChannel(this);
 }
 
 void Channel::Close() {
-  if (socket_fd_ > 0) {
-    DEBUG("x Channel(%lu) fd(%d)", id_, socket_fd_);
+  if (fd_ > 0) {
+    DEBUG("x Channel(%lu) fd(%d)", id_, fd_);
     selector_->RemoveChannel(this);
-    ::close(socket_fd_);
-    socket_fd_ = -1;
+    ::close(fd_);
+    fd_ = -1;
     EmitReadable();
   }
 }

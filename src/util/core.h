@@ -19,8 +19,11 @@ inline Ref<T> newInstance(Vars... args) {
   return std::make_shared<T>(args...);
 }
 
-template <class T>
-using Ptr = std::unique_ptr<T>;
+// template <class T>
+// using Ptr = std::unique_ptr<T>;
+
+template <class T, class Deleter = std::default_delete<T>>
+using Ptr = std::unique_ptr<T, Deleter>;
 
 template <class T>
 using Sharable = std::enable_shared_from_this<T>;
@@ -45,6 +48,10 @@ class NoCopy {
   NoCopy(){};
   DISABLE_COPY(NoCopy);
 };
+
+#define NoCopy \
+ private       \
+  NoCopy
 
 // --------------------------
 // Fail checking
@@ -77,6 +84,8 @@ inline T c_struct_init() {
   memset(&t, 0, sizeof(t));
   return t;
 }
+
+#define C_STRUCT(type, name) struct type name = c_struct_init<struct type>()
 
 // -----------------------
 // atomic counter
