@@ -21,12 +21,13 @@ struct epoll_event EpollSelector::GetEpollEvent(Channel* channel) {
   return ev;
 }
 
-EpollSelector::EpollSelector(int i) : id_(GetNewSelectorId()) {
+EpollSelector::EpollSelector(int i) : 
+  id_(GetNewSelectorId()),
+  epoll_fd_() {
+
   DEBUG("param: %d", i);
-  // FD_CLOEXEC
-  epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
-  EXPECT(epoll_fd_ > 0, "epoll create failed");
-  INFO("+ epollfd(%d)", epoll_fd_);
+  EXPECT(epoll_fd_->valid(), "epoll create failed");
+  INFO("+ epollfd(%d)", epoll_fd_->fd());
 }
 
 EpollSelector::~EpollSelector() {
@@ -34,8 +35,7 @@ EpollSelector::~EpollSelector() {
     // Channel will delete himself from channel set automatically.
     (*active_channels_.begin())->Close();
   }
-  ::close(epoll_fd_);
-  INFO("- epollfd(%d)", epoll_fd_);
+  INFO("- epollfd(%d)", epoll_fd_->fd());
 }
 
 void EpollSelector::AddChannel(Channel* channel) {

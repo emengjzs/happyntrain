@@ -5,6 +5,7 @@
 
 #include "src/eventloop.h"
 #include "src/selector.h"
+#include "src/tcpserver.h"
 #include "src/util/concurrent.h"
 #include "src/util/core.h"
 #include "src/util/fd.h"
@@ -13,6 +14,8 @@
 using namespace std;
 using namespace happyntrain;
 using namespace happyntrain::concurrent;
+using namespace happyntrain::network;
+using namespace happyntrain::fd;
 
 struct A {
   int a;
@@ -46,5 +49,14 @@ int main() {
       [&]() { eventloop.SubmitTask(30000, [&]() { eventloop.ShutDown(); }); });
   maint.join();
   t1.join();
+  { 
+    AutoClosable<SocketFD> socket_fd;
+    socket_fd->valid();
+    socket_fd->close();
+  }
+  // auto server = TCPServer::Create([&](auto socket) {
+  //                 socker.end("goodbye\n");
+  //               })->OnError([&](auto error) {});
+  // server.listen([&]() { DEBUG("opened server on ", server.Address()); });
   return 0;
 }

@@ -28,5 +28,22 @@ void TCPChannel::Send(std::string msg) {}
 
 void TCPChannel::Close() {}
 
+// TCPServer
+TCPServer::TCPServer()
+    : listenChannel_(NULL), eventloop_(NULL), address_("127.0.0.1", 12346) {}
+
+TCPServer::TCPServer(EventLoop* eventloop)
+    : listenChannel_(NULL),
+      eventloop_(eventloop),
+      address_("127.0.0.1", 12346) {}
+
+void TCPServer::Bind() {
+  int listen_fd = new_tcp_socket();
+  EXPECT(listen_fd > 0, "create listen socket fd failed");
+  SocketFD listenFD;
+  if (listenFD.valid()) {
+  }
+}
+
 // end happytrain
 }

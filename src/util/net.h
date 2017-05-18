@@ -5,10 +5,12 @@
 #include <netdb.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+#include <sys/epoll.h>
 
 #include <string>
 
 #include "core.h"
+#include "fd.h"
 
 namespace happyntrain {
 
@@ -25,6 +27,28 @@ inline int setNonBlock(int fd, bool value = true) {
 }
 
 inline int new_tcp_socket() { return socket(AF_INET, SOCK_STREAM, 0); }
+
+class SocketFD : public fd::FileDiscriptor<SocketFD> {
+ public:
+  SocketFD() : FileDiscriptor(new_tcp_socket()) {}
+  ~SocketFD() {}
+
+  int setReusePort() { return setSocketOpt(SO_REUSEPORT); }
+  int setNonBlock() { return network::setNonBlock(fd_, true); }
+  int setReuseAddress() { return setSocketOpt(SO_REUSEADDR); }
+
+ private:
+  int setSocketOpt(int opt) {
+    int flag = 1;
+    return setsockopt(fd_, SOL_SOCKET, opt, &flag, sizeof(flag));
+  }
+};
+
+class EpollFD : public fd::FileDiscriptor<EpollFD> {
+  public:
+    EpollFD(): FileDiscriptor(epoll_create1(EPOLL_CLOEXEC)) {}
+};
+
 
 struct IP4Address {
   std::string host;

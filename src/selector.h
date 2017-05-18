@@ -7,7 +7,7 @@
 #include "epoll-selector.h"
 
 namespace happyntrain {
-using Selector = EpollSelector;
+typedef EpollSelector Selector;
 
 inline Ptr<Selector> CreateNewSelector() {
   return Ptr<Selector>(new Selector(kMaxSelectEvents));

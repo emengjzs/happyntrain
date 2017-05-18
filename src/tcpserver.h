@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sys/socket.h>
+
 #include "eventloop.h"
 #include "util/core.h"
 #include "util/net.h"
@@ -35,12 +37,34 @@ class TCPChannel : NoCopy {
 
 class ServerTCPChannel : public TCPChannel {
  public:
-  void Bind(int fd, const network::IP4Address& address) {}
+  void Bind(const network::IP4Address& address) {}
 };
 
 class ClientTCPChannel : public TCPChannel {
  public:
-  void Connect(int fd, const network::IP4Address& address);
+  void Connect(const network::IP4Address& address) {}
 };
+
+class TCPServer : NoCopy {
+ public:
+  static Ref<TCPServer> Create();
+  TCPServer();
+  TCPServer(EventLoop* eventloop);
+  ~TCPServer();
+  void Listen();
+  void Listen(std::string host, int port);
+  void Close();
+  void OnListening();
+  void OnError();
+  void OnClose();
+  void Address();
+
+ private:
+  Channel* listenChannel_;
+  EventLoop* eventloop_;
+  network::IP4Address address_;
+  void Bind();
+};
+
 // end happyntrain
 }

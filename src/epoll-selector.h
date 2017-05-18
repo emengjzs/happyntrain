@@ -6,14 +6,19 @@
 #include <sys/epoll.h>
 
 #include "selector-base.h"
+#include "util/fd.h"
+#include "util/net.h"
 
 namespace happyntrain {
 
 class Channel;
 
 class EpollSelector : NoCopy {
+  
+  using EpollFD = fd::AutoClosable<network::EpollFD>;
+
   int64_t id_;
-  int epoll_fd_;
+  EpollFD epoll_fd_;
   int last_active_event_idx_;
   std::set<Channel*> active_channels_;
   struct epoll_event active_events_[kMaxSelectEvents];
