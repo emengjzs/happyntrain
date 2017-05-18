@@ -70,7 +70,7 @@ class Channel : NoCopy {
   static SequenceCreator<uint64_t> next_id_;
 
   Selector* selector_;
-  int socket_fd_;
+  int fd_;
   uint64_t id_;
   short events_flag_;
   concurrent::Runnable read_handler_;
@@ -93,7 +93,7 @@ class Channel : NoCopy {
   ~Channel() { Close(); }
 
   uint64_t id() const { return id_; }
-  int fd() const { return socket_fd_; }
+  int fd() const { return fd_; }
   int events() const { return events_flag_; }
 
   bool IsReadEnabled() const { return events_flag_ & kReadEventFlag; }
