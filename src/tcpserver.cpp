@@ -1,6 +1,5 @@
 #include "tcpserver.h"
 
-#include "util/fd.h"
 #include "util/net.h"
 
 using namespace std;
@@ -28,7 +27,10 @@ void TCPChannel::Send(std::string msg) {}
 
 void TCPChannel::Close() {}
 
-// TCPServer
+// -------------------
+class TCPServer;
+//--------------------
+
 TCPServer::TCPServer()
     : listenChannel_(NULL), eventloop_(NULL), address_("127.0.0.1", 12346) {}
 
@@ -38,11 +40,23 @@ TCPServer::TCPServer(EventLoop* eventloop)
       address_("127.0.0.1", 12346) {}
 
 void TCPServer::Bind() {
-  int listen_fd = new_tcp_socket();
-  EXPECT(listen_fd > 0, "create listen socket fd failed");
   SocketFD listenFD;
-  if (listenFD.valid()) {
-  }
+
+  // Fail the program if these fail
+  EXIT_IF(listenFD.invalid(), "create listen socket fd failed");
+  EXIT_IF(listenFD.setNonBlock() == false, "fd(%d) set NONBLOCK fail", listenFD.fd());
+  
+  // Still go on even if these fail
+  EXPECT(listenFD.setReusePort(), "fd(%d) set REUSEPORT fail", listenFD.fd());
+  EXPECT(listenFD.setCloseOnExec(), "fd(%d) set CLOSEONEXEC fail", listenFD.fd());
+
+  EXIT_IF(listenFD.bind(address_.host, address_.port) == false, 
+    "fd(%d) bind port(%d) failed", listenFD.fd(), address_.port);
+}
+
+
+void TCPServer::Listen() {
+  void Listen();
 }
 
 // end happytrain

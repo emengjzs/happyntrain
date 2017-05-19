@@ -33,9 +33,21 @@ class SocketFD : public fd::FileDiscriptor<SocketFD> {
   SocketFD() : FileDiscriptor(new_tcp_socket()) {}
   ~SocketFD() {}
 
-  int setReusePort() { return setSocketOpt(SO_REUSEPORT); }
-  int setNonBlock() { return network::setNonBlock(fd_, true); }
-  int setReuseAddress() { return setSocketOpt(SO_REUSEADDR); }
+  bool setReusePort() { return setSocketOpt(SO_REUSEPORT) == 0; }
+  bool setNonBlock() { return network::setNonBlock(fd_, true) == 0; }
+  bool setReuseAddress() { return setSocketOpt(SO_REUSEADDR) == 0; }
+
+  bool bind(std::string host, uint16_t port) {
+     C_STRUCT(sockaddr_in, addr);
+     addr.sin_family = AF_INET;
+     addr.sin_port = htons(port);
+     addr.sin_addr.s_addr = INADDR_ANY;
+     return ::bind(fd_, (struct sockaddr*) &addr, sizeof(struct sockaddr)) == 0;
+  }
+
+  bool listen(int toBeAcceptedQueueLength) {
+    return ::listen(fd_, toBeAcceptedQueueLength);
+  }
 
  private:
   int setSocketOpt(int opt) {
@@ -51,11 +63,11 @@ class EpollFD : public fd::FileDiscriptor<EpollFD> {
 
 
 struct IP4Address {
-  std::string host;
-  short port;
+  const std::string host;
+  const uint16_t port;
 
-  IP4Address(short port_) : IP4Address("", port_) {}
-  IP4Address(std::string host_, short port_) : host(host_), port(port_) {}
+  IP4Address(uint16_t port_) : IP4Address("", port_) {}
+  IP4Address(std::string host_, uint16_t port_) : host(host_), port(port_) {}
 };
 
 class AddressInfoHolder : NoCopy {

@@ -43,7 +43,11 @@ class FileDiscriptor {
   ~FileDiscriptor() {}
 
   const int fd() const { return fd_; }
+  operator const int() { return fd_; }
+  
   bool valid() const { return fd_ > 0; }
+  bool invalid() const { return fd_ == -1; }
+
   void close() {
     if (fd_ <= 0) {
       WARN("Closse invalid fd(%d)", fd_);
@@ -52,7 +56,9 @@ class FileDiscriptor {
       fd_ = -1;
     }
   }
-  operator const int() { return fd_; }
+
+  bool setCloseOnExec() { return set_fd_closexec(fd_) == 0; }
+
  protected:
   int fd_;
 };
