@@ -2,6 +2,7 @@
 
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 
 namespace happyntrain {
 namespace fd {
@@ -43,6 +44,7 @@ class FileDiscriptor {
   ~FileDiscriptor() {}
 
   const int fd() const { return fd_; }
+  const int err() const { return errno; }
   operator const int() { return fd_; }
   
   bool valid() const { return fd_ > 0; }
