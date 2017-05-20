@@ -42,8 +42,6 @@ class TimerTaskManager : NoCopy {
 
   int64_t GetNextTimeout();
 
-  void UpdateTaskDeadline();
-
   void ExecuteTimeoutTasks();
 };
 

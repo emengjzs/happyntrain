@@ -38,8 +38,6 @@ int64_t TimerTaskManager::GetNextTimeout() {
   }
 }
 
-void TimerTaskManager::UpdateTaskDeadline() {}
-
 void TimerTaskManager::ExecuteTimeoutTasks() {
   int64_t current_ms = time::now<ms>();
   while (!taskQueue_.empty()) {
