@@ -49,9 +49,6 @@ class NoCopy {
   DISABLE_COPY(NoCopy);
 };
 
-#define NoCopy \
- private       \
-  NoCopy
 
 // --------------------------
 // Fail checking
