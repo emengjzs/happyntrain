@@ -1,18 +1,15 @@
 #pragma once
 
-#include <sys/socket.h>
-
-#include "eventloop.h"
 #include "util/core.h"
 #include "util/net.h"
+#include "eventloop.h"
 
 namespace happyntrain {
 
-class TCPChannel : NoCopy {
+class TCPChannel : public Sharable<TCPChannel>, private NoCopy {
  public:
   enum State {
     INVALID,
-    ESTABLISH,
     CONNECTED,
     CLOSED,
     FAILED,
@@ -28,11 +25,14 @@ class TCPChannel : NoCopy {
   TCPChannel(EventLoop* eventloop);
   ~TCPChannel();
 
-  virtual void Setup(const network::IP4Address address) = 0;
   void Send(std::string msg);
   void Close();
+  void Register(network::ConnectionSocketFD& connectFD);
 
   State state() const { return state_; }
+
+ private:
+  void OnReadable();
 };
 
 class ServerTCPChannel : public TCPChannel {
@@ -52,18 +52,22 @@ class TCPServer : NoCopy {
   TCPServer(EventLoop* eventloop);
   ~TCPServer();
   void Listen();
-  void Listen(std::string host, int port);
+  void Listen(int port);
   void Close();
   void OnListening();
+  void OnConnect();
   void OnError();
   void OnClose();
   void Address();
 
  private:
-  Channel* listenChannel_;
+  Ptr<Channel> listenChannel_;
   EventLoop* eventloop_;
   network::IP4Address address_;
-  void Bind();
+  
+  void Bind(network::SocketFD& listenFD);
+  void OnAcceptable();
+  
 };
 
 // end happyntrain

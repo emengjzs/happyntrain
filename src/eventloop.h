@@ -8,6 +8,7 @@
 #include "timertask.h"
 #include "util/concurrent.h"
 #include "util/core.h"
+#include "util/net.h"
 
 namespace happyntrain {
 
@@ -60,6 +61,9 @@ class EventLoop : NoCopy {
   // Wake up the eventloop to complete the task submitted.
   void WakeUp();
 
+  Ptr<Channel> RegisterChannel(const network::SocketFD& socketFD);
+  Ptr<Channel> RegisterChannel(const network::ConnectionSocketFD& connectFD);
+
  private:
 };
 
@@ -105,6 +109,10 @@ class Channel : NoCopy {
 
   Channel& SetWriteEnable(bool enable = true) {
     return SetEventsFlag(kWriteEventFlag, enable);
+  }
+
+  Channel& SetReadWriteEnable() {
+    return SetEventsFlag(kReadEventFlag | kWriteEventFlag, true); 
   }
 
   Channel& OnWrite(const concurrent::Runnable& onwrite) {

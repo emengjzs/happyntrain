@@ -46,7 +46,7 @@ class SocketFD : public fd::FileDiscriptor<SocketFD> {
   }
 
   bool listen(int toBeAcceptedQueueLength) {
-    return ::listen(fd_, toBeAcceptedQueueLength);
+    return ::listen(fd_, toBeAcceptedQueueLength) == 0;
   }
 
  private:
@@ -56,15 +56,36 @@ class SocketFD : public fd::FileDiscriptor<SocketFD> {
   }
 };
 
+// Default set closexec
 class EpollFD : public fd::FileDiscriptor<EpollFD> {
-  public:
-    EpollFD(): FileDiscriptor(epoll_create1(EPOLL_CLOEXEC)) {}
+ public:
+  EpollFD(): FileDiscriptor(epoll_create1(EPOLL_CLOEXEC)) {}
+};
+
+// Default set nonblock and closexec
+class ConnectionSocketFD : public fd::FileDiscriptor<ConnectionSocketFD> {
+ public:
+  ConnectionSocketFD(int listenedFD): FileDiscriptor(initConnectionFD(listenedFD)) {}
+ 
+  template<size_t len>
+  int read(char (&buffer)[len]) {
+    return ::read(fd_, buffer, len);
+  }
+
+
+ private:
+  static int initConnectionFD(int listened_fd) {
+    struct sockaddr_in remote_addr;
+    socklen_t rsz = sizeof(remote_addr);
+    return accept4(listened_fd, (struct sockaddr *) &remote_addr, &rsz, SOCK_NONBLOCK | SOCK_CLOEXEC);
+  }
+
 };
 
 
 struct IP4Address {
-  const std::string host;
-  const uint16_t port;
+  std::string host;
+  uint16_t port;
 
   IP4Address(uint16_t port_) : IP4Address("", port_) {}
   IP4Address(std::string host_, uint16_t port_) : host(host_), port(port_) {}

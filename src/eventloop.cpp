@@ -15,6 +15,7 @@
 using namespace std;
 using namespace happyntrain::concurrent;
 using namespace happyntrain::timer;
+using namespace happyntrain::network;
 
 namespace happyntrain {
 
@@ -75,6 +76,15 @@ void EventLoop::CompleteTasks() {
 
 // Wake up the eventloop to complete the task submitted.
 void EventLoop::WakeUp() { wakeUpHandler_.WakeUp(); }
+
+Ptr<Channel> EventLoop::RegisterChannel(const SocketFD& socketFD) {
+  return Ptr<Channel>(new Channel(selector_.get(), socketFD.fd()));
+}
+
+Ptr<Channel> EventLoop::RegisterChannel(const network::ConnectionSocketFD& connectFD) {
+  return Ptr<Channel>(new Channel(selector_.get(), connectFD.fd()));
+}
+
 
 // -----------------------
 class WakeUpHandler;
