@@ -61,7 +61,7 @@ class EventLoop : NoCopy {
   // Wake up the eventloop to complete the task submitted.
   void WakeUp();
 
-  Ptr<Channel> RegisterChannel(const network::SocketFD& socketFD);
+  Ptr<Channel> RegisterChannel(const network::ServerSocketFD& socketFD);
   Ptr<Channel> RegisterChannel(const network::ConnectionSocketFD& connectFD);
 
  private:

@@ -138,8 +138,8 @@ SequenceCreator<uint64_t> Channel::next_id_(0);
 
 Channel::Channel(Selector* selector, int fd)
     : selector_(selector), fd_(fd), id_(next_id_()), events_flag_(0) {
-  int errcode = network::setNonBlock(fd_);
-  EXPECT(errcode == 0, "fd %d cannot set nonblock.", fd_);
+  // int errcode = network::setNonBlock(fd_);
+  // EXPECT(errcode == 0, "fd %d cannot set nonblock.", fd_);
   selector_->AddChannel(this);
 }
 
