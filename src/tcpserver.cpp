@@ -10,11 +10,12 @@ namespace happyntrain {
 
 class TCPChannel;
 
-TCPChannel::TCPChannel(EventLoop* eventloop)
-    : channel_(nullptr),
+TCPChannel::TCPChannel(EventLoop* eventloop, ConnectionSocketFD&& connectionSocket)
+    : state_(State::INVALID),
+      channel_(nullptr),
       eventloop_(eventloop),
-      state_(State::INVALID),
-      address_(0) {}
+      address_(0),
+      connectionSocket_(std::forward<ConnectionSocketFD>(connectionSocket)) {}
 
 TCPChannel::~TCPChannel() {}
 
@@ -22,18 +23,21 @@ void TCPChannel::Send(std::string msg) {}
 
 void TCPChannel::Close() {}
 
-void TCPChannel::Register(ConnectionSocketFD& connectFD) {
-  channel_ = std::move(eventloop_->RegisterChannel(connectFD));
+// Register channel to eventloop
+// including selector, events, and event-callback
+void TCPChannel::Register() {
+  channel_ = std::move(eventloop_->RegisterChannel(connectionSocket_));
   // TODO: should register kWriteEventFlag ?
   channel_->SetReadEnable();
   state_ = State::CONNECTED;
+  channel_->OnRead(std::bind(&OnReadable, this));
 }
 
 void TCPChannel::OnReadable() {
   if (state_ != State::CONNECTED) {
     WARN("connection fd(%d) not in connected state", channel_->fd());
-
   }
+  connectionSocket_.read()
 }
 
 
@@ -57,7 +61,7 @@ void TCPServer::Listen(int port) {
 }
 
 void TCPServer::Listen() {
-  SocketFD listenFD;
+  ServerSocketFD listenFD;
   Bind(listenFD);
   EXIT_IF(listenFD.listen(128) == false, "fd(%d) listen to port(%d) failed",
           listenFD.fd(), address_.port);
@@ -89,10 +93,11 @@ void TCPServer::OnAcceptable() {
       ERROR("accept connection failed on fd(%d)", listenChannel_->fd());
       break;
     }
-    Ref<TCPChannel> connection = newInstance<TCPChannel>(eventloop_);
-    connection->Register(connectionSocket);
+    Ref<TCPChannel> connection = newInstance<TCPChannel>(eventloop_, std::move(connectionSocket));
+    connection->Register();
     // connected !
     OnConnect();
+    connection->OnReadable();
   }
 }
 

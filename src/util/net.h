@@ -28,10 +28,10 @@ inline int setNonBlock(int fd, bool value = true) {
 
 inline int new_tcp_socket() { return socket(AF_INET, SOCK_STREAM, 0); }
 
-class SocketFD : public fd::FileDiscriptor<SocketFD> {
+class ServerSocketFD : public fd::FileDiscriptor<ServerSocketFD> {
  public:
-  SocketFD() : FileDiscriptor(new_tcp_socket()) {}
-  ~SocketFD() {}
+  ServerSocketFD() : FileDiscriptor(new_tcp_socket()) {}
+  ~ServerSocketFD() {}
 
   bool setReusePort() { return setSocketOpt(SO_REUSEPORT) == 0; }
   bool setNonBlock() { return network::setNonBlock(fd_, true) == 0; }
@@ -66,12 +66,14 @@ class EpollFD : public fd::FileDiscriptor<EpollFD> {
 class ConnectionSocketFD : public fd::FileDiscriptor<ConnectionSocketFD> {
  public:
   ConnectionSocketFD(int listenedFD): FileDiscriptor(initConnectionFD(listenedFD)) {}
+  ConnectionSocketFD(ConnectionSocketFD&& socketFD): FileDiscriptor(socketFD.fd_) {
+    socketFD.fd_ = -1; 
+  }
  
   template<size_t len>
   int read(char (&buffer)[len]) {
     return ::read(fd_, buffer, len);
   }
-
 
  private:
   static int initConnectionFD(int listened_fd) {
@@ -79,9 +81,7 @@ class ConnectionSocketFD : public fd::FileDiscriptor<ConnectionSocketFD> {
     socklen_t rsz = sizeof(remote_addr);
     return accept4(listened_fd, (struct sockaddr *) &remote_addr, &rsz, SOCK_NONBLOCK | SOCK_CLOEXEC);
   }
-
 };
-
 
 struct IP4Address {
   std::string host;

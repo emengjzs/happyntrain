@@ -20,14 +20,15 @@ class TCPChannel : public Sharable<TCPChannel>, private NoCopy {
   Ptr<Channel> channel_;
   EventLoop* eventloop_;
   network::IP4Address address_;
+  ConnectionSocketFD connectionSocket_;
 
  public:
-  TCPChannel(EventLoop* eventloop);
+  TCPChannel(EventLoop* eventloop, ConnectionSocketFD&& connectionSocket);
   ~TCPChannel();
 
   void Send(std::string msg);
   void Close();
-  void Register(network::ConnectionSocketFD& connectFD);
+  void Register(); 
 
   State state() const { return state_; }
 
@@ -65,7 +66,7 @@ class TCPServer : NoCopy {
   EventLoop* eventloop_;
   network::IP4Address address_;
   
-  void Bind(network::SocketFD& listenFD);
+  void Bind(network::ServerSocketFD& listenFD);
   void OnAcceptable();
   
 };
