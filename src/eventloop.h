@@ -17,7 +17,6 @@ class EventLoop : NoCopy {
   Ptr<Selector> selector_;
   // A singal to turnoff eventloop
   std::atomic<bool> terminate_;
-  int32_t selectCycleMs_;
   concurrent::LinkedBlockingQueue<concurrent::Runnable> taskQueue_;
   timer::TimerTaskManager timerTaskManager_;
 

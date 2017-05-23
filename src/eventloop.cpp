@@ -27,8 +27,8 @@ EventLoop::EventLoop(int taskCapacity)
     : selector_(CreateNewSelector()),
       terminate_(false),
       taskQueue_(),
-      wakeUpHandler_(),
-      timerTaskManager_() {
+      timerTaskManager_(), 
+      wakeUpHandler_() {
   InitWakeUpEventChannel();
 }
 
@@ -77,7 +77,7 @@ void EventLoop::CompleteTasks() {
 // Wake up the eventloop to complete the task submitted.
 void EventLoop::WakeUp() { wakeUpHandler_.WakeUp(); }
 
-Ptr<Channel> EventLoop::RegisterChannel(const SocketFD& socketFD) {
+Ptr<Channel> EventLoop::RegisterChannel(const ServerSocketFD& socketFD) {
   return Ptr<Channel>(new Channel(selector_.get(), socketFD.fd()));
 }
 
