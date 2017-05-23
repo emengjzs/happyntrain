@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5.1)
+cmake_minimum_required(VERSION 3.2.2)
 
 project(happy-network-train)
 set(HAPPY_N_TRAIN_TARGET_VERSION "0.0.1" CACHE STRING "happy-network-train version")
