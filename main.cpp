@@ -50,7 +50,7 @@ int main() {
   maint.join();
   t1.join();
   { 
-    AutoClosable<SocketFD> socket_fd;
+    AutoClosable<ServerSocketFD> socket_fd;
     socket_fd->valid();
     socket_fd->close();
   }
