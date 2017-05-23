@@ -15,8 +15,8 @@ template <class T>
 using Ref = std::shared_ptr<T>;
 
 template <class T, typename... Vars>
-inline Ref<T> newInstance(Vars... args) {
-  return std::make_shared<T>(args...);
+inline Ref<T> newInstance(Vars&&... args) {
+  return std::make_shared<T>(std::forward<Vars>(args)...);
 }
 
 // template <class T>
