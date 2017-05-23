@@ -15,7 +15,10 @@ TCPChannel::TCPChannel(EventLoop* eventloop, ConnectionSocketFD&& connectionSock
       channel_(nullptr),
       eventloop_(eventloop),
       address_(0),
-      connectionSocket_(std::forward<ConnectionSocketFD>(connectionSocket)) {}
+      connectionSocket_(std::forward<ConnectionSocketFD>(connectionSocket)),
+      inBuffer_(),
+      outBuffer_()
+      {}
 
 TCPChannel::~TCPChannel() {}
 
@@ -26,18 +29,25 @@ void TCPChannel::Close() {}
 // Register channel to eventloop
 // including selector, events, and event-callback
 void TCPChannel::Register() {
-  channel_ = std::move(eventloop_->RegisterChannel(connectionSocket_));
+  channel_ = eventloop_->RegisterChannel(connectionSocket_);
   // TODO: should register kWriteEventFlag ?
   channel_->SetReadEnable();
   state_ = State::CONNECTED;
-  channel_->OnRead(std::bind(&OnReadable, this));
+  channel_->OnRead(std::bind(&TCPChannel::OnReadable, this));
 }
+
 
 void TCPChannel::OnReadable() {
   if (state_ != State::CONNECTED) {
     WARN("connection fd(%d) not in connected state", channel_->fd());
+    // TODO: handle exception 
+    return;
   }
-  connectionSocket_.read()
+
+  while (state_ == State::CONNECTED) {
+    char buffer[1 << 8];
+    connectionSocket_.read(buffer);
+  }
 }
 
 
@@ -66,11 +76,11 @@ void TCPServer::Listen() {
   EXIT_IF(listenFD.listen(128) == false, "fd(%d) listen to port(%d) failed",
           listenFD.fd(), address_.port);
   INFO("fd(%d) is now listening on port(%d)", listenFD.fd(), address_.port);
-  listenChannel_ = std::move((eventloop_->RegisterChannel(listenFD)));
+  listenChannel_ = eventloop_->RegisterChannel(listenFD);
   listenChannel_->SetReadEnable().OnRead([this]() { OnAcceptable(); });
 }
 
-void TCPServer::Bind(SocketFD& listenFD) {
+void TCPServer::Bind(ServerSocketFD& listenFD) {
   // Fail the program if these fail
   EXIT_IF(listenFD.invalid(), "create listen socket fd failed");
   EXIT_IF(listenFD.setNonBlock() == false, "fd(%d) set NONBLOCK fail",
@@ -97,7 +107,6 @@ void TCPServer::OnAcceptable() {
     connection->Register();
     // connected !
     OnConnect();
-    connection->OnReadable();
   }
 }
 

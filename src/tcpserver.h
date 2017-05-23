@@ -3,6 +3,7 @@
 #include "util/core.h"
 #include "util/net.h"
 #include "eventloop.h"
+#include "buffer.h"
 
 namespace happyntrain {
 
@@ -17,13 +18,17 @@ class TCPChannel : public Sharable<TCPChannel>, private NoCopy {
 
  private:
   State state_;
+
   Ptr<Channel> channel_;
   EventLoop* eventloop_;
   network::IP4Address address_;
-  ConnectionSocketFD connectionSocket_;
+  network::ConnectionSocketFD connectionSocket_;
+
+  Buffer inBuffer_;
+  Buffer outBuffer_;
 
  public:
-  TCPChannel(EventLoop* eventloop, ConnectionSocketFD&& connectionSocket);
+  TCPChannel(EventLoop* eventloop, network::ConnectionSocketFD&& connectionSocket);
   ~TCPChannel();
 
   void Send(std::string msg);
