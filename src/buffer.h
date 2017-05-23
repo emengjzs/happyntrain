@@ -31,7 +31,8 @@ class Buffer {
     content_.reserve(predictSize_);
     return temp;
   }
-
+  inline const std::string& str() { return content_; } 
   inline size_t size() const { return content_.size(); }
   inline bool empty() const { return content_.empty(); }
+  inline void clear() { content_.clear(); }
 };

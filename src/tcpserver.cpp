@@ -17,7 +17,9 @@ TCPChannel::TCPChannel(EventLoop* eventloop, ConnectionSocketFD&& connectionSock
       address_(0),
       connectionSocket_(std::forward<ConnectionSocketFD>(connectionSocket)),
       inBuffer_(),
-      outBuffer_()
+      predictInBufferSize_(1 << 7),
+      outBuffer_(),
+      dataListener_(nullptr)
       {}
 
 TCPChannel::~TCPChannel() {}
@@ -28,12 +30,12 @@ void TCPChannel::Close() {}
 
 // Register channel to eventloop
 // including selector, events, and event-callback
-void TCPChannel::Register() {
+void TCPChannel::Register(Ref<TCPChannel> self) {
   channel_ = eventloop_->RegisterChannel(connectionSocket_);
   // TODO: should register kWriteEventFlag ?
   channel_->SetReadEnable();
   state_ = State::CONNECTED;
-  channel_->OnRead(std::bind(&TCPChannel::OnReadable, this));
+  channel_->OnRead([self] { self->OnReadable(); });
 }
 
 
@@ -44,12 +46,44 @@ void TCPChannel::OnReadable() {
     return;
   }
 
+  const size_t maxBufferSize = 1 << 15;
+
   while (state_ == State::CONNECTED) {
-    char buffer[1 << 8];
-    connectionSocket_.read(buffer);
+    Ptr<char[]> buffer(new char[predictInBufferSize_]);
+    ssize_t actualReadSize = connectionSocket_.read(buffer.get(), predictInBufferSize_);
+    DEBUG("Channel id(%lu) fd(%d) read(%zu/%zd)", 
+      channel_->id(), channel_->fd(), actualReadSize, predictInBufferSize_);
+
+    if (actualReadSize == -1) {
+      int err = connectionSocket_.err();
+      if (err == EAGAIN || err == EWOULDBLOCK) {
+        FinishNonBlockingRead();
+        break;
+      } else if (err == EINTR)  // interrupted
+        continue;
+      else {
+        break;
+      }
+    } else if (actualReadSize == 0) {
+      break;
+    } else {
+      inBuffer_.append(buffer.get(), predictInBufferSize_);
+      if (actualReadSize == predictInBufferSize_ && predictInBufferSize_ < maxBufferSize) {
+        predictInBufferSize_ <<= 1;
+      }    
+    } 
   }
 }
 
+void TCPChannel::FinishNonBlockingRead() {
+  DEBUG("Buffer(%s)", inBuffer_.str().c_str());
+  if (dataListener_) {
+    dataListener_(shared_from_this(), inBuffer_);
+  }
+  else {
+    inBuffer_.clear();
+  }
+}
 
 // -------------------
 class TCPServer;
@@ -100,11 +134,13 @@ void TCPServer::OnAcceptable() {
   while (true) {
     ConnectionSocketFD connectionSocket(listenFD);
     if (connectionSocket.invalid()) {
-      ERROR("accept connection failed on fd(%d)", listenChannel_->fd());
+      if (connectionSocket.err() != EAGAIN && connectionSocket.err() != EINTR)
+        ERROR("accept connection failed on listen fd(%d)", listenFD);
       break;
     }
+    DEBUG("accept connection fd(%d) succeed on listen fd(%d)", connectionSocket.fd(), listenFD);
     Ref<TCPChannel> connection = newInstance<TCPChannel>(eventloop_, std::move(connectionSocket));
-    connection->Register();
+    connection->Register(connection);
     // connected !
     OnConnect();
   }

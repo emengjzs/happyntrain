@@ -39,7 +39,7 @@ void EventLoop::InitWakeUpEventChannel() { wakeUpHandler_.Init(this); }
 // Handle the evnetLoop once;
 void EventLoop::LoopOnce() {
   int select_wait_time = min(int64_t(1000), timerTaskManager_.GetNextTimeout());
-  DEBUG("wait_time(%d ms)", select_wait_time);
+  // DEBUG("wait_time(%d ms)", select_wait_time);
   selector_->SelectOnce(select_wait_time);
   timerTaskManager_.ExecuteTimeoutTasks();
 }

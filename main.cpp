@@ -26,34 +26,9 @@ struct A {
 
 int main() {
   EventLoop eventloop(0);
-  set<int> fuckset;
-  fuckset.insert(1);
-  LinkedBlockingQueue<A> queue;
-  queue.Push(A(1, "fuck"));
-  DEBUG("%d", queue.Pop().a);
-  int fd = network::new_tcp_socket();
-  fd::set_fd_nonblocking(fd);
-  fd::set_fd_closexec(fd);
-  eventloop.SubmitTask(10000, []() { INFO("Hello, world!"); });
-  eventloop.SubmitTask(20000, []() { INFO("Fuck you!"); });
-  std::thread maint([&]() { eventloop.Run(); });
-
-  for (int i = 0; i < 100; i++) {
-    std::thread t([i, &eventloop]() {
-      eventloop.SubmitTask([i]() { INFO("Wake up %d!", 2 * i); });
-      eventloop.SubmitTask([i]() { INFO("Wake up %d!", 2 * i + 1); });
-    });
-    t.detach();
-  }
-  std::thread t1(
-      [&]() { eventloop.SubmitTask(30000, [&]() { eventloop.ShutDown(); }); });
-  maint.join();
-  t1.join();
-  { 
-    AutoClosable<ServerSocketFD> socket_fd;
-    socket_fd->valid();
-    socket_fd->close();
-  }
+  TCPServer server(&eventloop);
+  server.Listen(8888);
+  eventloop.Run();
   // auto server = TCPServer::Create([&](auto socket) {
   //                 socker.end("goodbye\n");
   //               })->OnError([&](auto error) {});

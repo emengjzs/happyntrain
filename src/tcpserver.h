@@ -16,6 +16,8 @@ class TCPChannel : public Sharable<TCPChannel>, private NoCopy {
     FAILED,
   };
 
+  using DataListener = std::function<void(const Ref<TCPChannel>&, Buffer&)>;
+
  private:
   State state_;
 
@@ -25,7 +27,10 @@ class TCPChannel : public Sharable<TCPChannel>, private NoCopy {
   network::ConnectionSocketFD connectionSocket_;
 
   Buffer inBuffer_;
+  size_t predictInBufferSize_;
   Buffer outBuffer_;
+
+  DataListener dataListener_;
 
  public:
   TCPChannel(EventLoop* eventloop, network::ConnectionSocketFD&& connectionSocket);
@@ -33,12 +38,16 @@ class TCPChannel : public Sharable<TCPChannel>, private NoCopy {
 
   void Send(std::string msg);
   void Close();
-  void Register(); 
+  void Register(Ref<TCPChannel> self);
+
+  void OnRead(DataListener dataListener) { dataListener_ = dataListener; } 
 
   State state() const { return state_; }
 
  private:
+  
   void OnReadable();
+  void FinishNonBlockingRead();
 };
 
 class ServerTCPChannel : public TCPChannel {
@@ -56,7 +65,7 @@ class TCPServer : NoCopy {
   static Ref<TCPServer> Create();
   TCPServer();
   TCPServer(EventLoop* eventloop);
-  ~TCPServer();
+  ~TCPServer() {}
   void Listen();
   void Listen(int port);
   void Close();

@@ -65,11 +65,13 @@ void EpollSelector::UpdateChannel(Channel* channel) {
 
 void EpollSelector::SelectOnce(int wait_ms) {
   {
-    time::timing beg("Epoll Select");
+    // time::timing beg("Epoll Select");
     last_active_event_idx_ =
         epoll_wait(epoll_fd_, active_events_, kMaxSelectEvents, wait_ms);
   }
-  INFO("Epoll Select: %d events", last_active_event_idx_);
+  if (last_active_event_idx_) {
+    INFO("Epoll Select: %d events", last_active_event_idx_);
+  }
   EXPECT(last_active_event_idx_ >= 0, "Epoll Error: return %d",
          last_active_event_idx_);
   for (int i = --last_active_event_idx_; i >= 0;

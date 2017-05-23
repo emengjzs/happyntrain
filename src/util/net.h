@@ -71,7 +71,11 @@ class ConnectionSocketFD : public fd::FileDiscriptor<ConnectionSocketFD> {
   }
  
   template<size_t len>
-  int read(char (&buffer)[len]) {
+  ssize_t  read(char (&buffer)[len]) {
+    return ::read(fd_, buffer, len);
+  }
+
+  ssize_t  read(char* buffer, size_t len) {
     return ::read(fd_, buffer, len);
   }
 
