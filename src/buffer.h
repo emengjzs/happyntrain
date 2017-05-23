@@ -8,6 +8,7 @@
 class Buffer {
   std::string content_;
   size_t predictSize_;
+
  public:
   Buffer(): content_(), predictSize_(0) {}
   Buffer(Buffer&& buffer): content_(std::move(buffer.content_)), predictSize_(0) { }
@@ -27,7 +28,7 @@ class Buffer {
       (temp.size() >> 2) + 
       (predictSize_ >> 4)
       );
-    content_.reserve(predictSize_ );
+    content_.reserve(predictSize_);
     return temp;
   }
 
