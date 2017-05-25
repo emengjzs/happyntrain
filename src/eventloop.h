@@ -3,6 +3,7 @@
 #include <poll.h>
 
 #include <atomic>
+#include <queue>
 
 #include "selector.h"
 #include "timertask.h"
@@ -17,8 +18,10 @@ class EventLoop : NoCopy {
   Ptr<Selector> selector_;
   // A singal to turnoff eventloop
   std::atomic<bool> terminate_;
-  concurrent::LinkedBlockingQueue<concurrent::Runnable> taskQueue_;
+  concurrent::LinkedBlockingQueue<Runnable> taskQueue_;
+  std::queue<Runnable> cleanTaskQueue_;
   timer::TimerTaskManager timerTaskManager_;
+
 
   class WakeUpHandler : NoCopy {
     Ptr<Channel> eventChannel_;
@@ -37,10 +40,14 @@ class EventLoop : NoCopy {
 
   void InitWakeUpEventChannel();
   void CompleteTasks();
+  void CompleteCleanUpTasks();
 
  public:
   explicit EventLoop(int taskCapacity);
   ~EventLoop();
+
+  // not thread safe!!
+  static Ref<EventLoop> GetDefaultEventLoop() { return newInstance<EventLoop>(0); }
 
   // Handle the evnetLoop once;
   void LoopOnce();
@@ -52,17 +59,20 @@ class EventLoop : NoCopy {
   void ShutDown();
 
   // Submit a Runnable task, run it after delayMs ms.
-  timer::TaskId SubmitTask(uint64_t delayMs, concurrent::Runnable&& task);
+  timer::TaskId SubmitTask(uint64_t delayMs, Runnable&& task);
 
   // Submit a Runnable task, thread-safe
-  void SubmitTask(concurrent::Runnable&& task);
+  void SubmitTask(Runnable&& task);
+
+  // Submit a Runnable clean up task, not thread-safe
+  void SubmitCleanUpTask(Runnable&& task) { cleanTaskQueue_.emplace(std::forward<Runnable>(task)); }
 
   // Wake up the eventloop to complete the task submitted.
   void WakeUp();
 
-  Ptr<Channel> RegisterChannel(const network::ServerSocketFD& socketFD);
-  Ptr<Channel> RegisterChannel(const network::ConnectionSocketFD& connectFD);
-
+  template <typename FileDiscriptor>
+  inline Ptr<Channel> RegisterChannel(const FileDiscriptor& fileDiscriptor);
+ 
  private:
 };
 
@@ -76,9 +86,9 @@ class Channel : NoCopy {
   int fd_;
   uint64_t id_;
   short events_flag_;
-  concurrent::Runnable read_handler_;
-  concurrent::Runnable write_handler_;
-  concurrent::Runnable error_handler_;
+  Runnable read_handler_;
+  Runnable write_handler_;
+  Runnable error_handler_;
 
   Channel& SetEventsFlag(const int flag, bool enable) {
     events_flag_ = enable ? events_flag_ | flag : events_flag_ & (~flag);
@@ -112,21 +122,27 @@ class Channel : NoCopy {
     return SetEventsFlag(kReadEventFlag | kWriteEventFlag, true); 
   }
 
-  Channel& OnWrite(const concurrent::Runnable& onwrite) {
+  Channel& OnWrite(const Runnable& onwrite) {
     write_handler_ = onwrite;
     return *this;
   }
 
-  Channel& OnRead(const concurrent::Runnable& onread) {
+  Channel& OnRead(const Runnable& onread) {
     read_handler_ = onread;
     return *this;
   }
 
+  void DisableHandler() { read_handler_ = write_handler_ = error_handler_ = []{}; }
   void EmitReadable() { read_handler_(); }
   void EmitWritable() { write_handler_(); }
 
   void Close();
 };
+
+template <typename FileDiscriptor>
+Ptr<Channel> EventLoop::RegisterChannel(const FileDiscriptor& fileDiscriptor) {
+  return Ptr<Channel>(new Channel(selector_.get(), fileDiscriptor.fd()));
+}
 
 // end happyntrain
 }

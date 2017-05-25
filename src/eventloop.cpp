@@ -27,6 +27,7 @@ EventLoop::EventLoop(int taskCapacity)
     : selector_(CreateNewSelector()),
       terminate_(false),
       taskQueue_(),
+      cleanTaskQueue_(),
       timerTaskManager_(), 
       wakeUpHandler_() {
   InitWakeUpEventChannel();
@@ -38,10 +39,13 @@ void EventLoop::InitWakeUpEventChannel() { wakeUpHandler_.Init(this); }
 
 // Handle the evnetLoop once;
 void EventLoop::LoopOnce() {
-  int select_wait_time = min(int64_t(1000), timerTaskManager_.GetNextTimeout());
-  // DEBUG("wait_time(%d ms)", select_wait_time);
-  selector_->SelectOnce(select_wait_time);
+  // Phase1: Timer Task
   timerTaskManager_.ExecuteTimeoutTasks();
+  // Phase2: Select IO event
+  int select_wait_time = min(int64_t(1000), timerTaskManager_.GetNextTimeout());
+  selector_->SelectOnce(select_wait_time);
+  // Phase3: CleanUp Task for connections, etc...
+  CompleteCleanUpTasks();
 }
 
 // Start the eventloop
@@ -62,7 +66,7 @@ TaskId EventLoop::SubmitTask(uint64_t delayMs, Runnable&& task) {
   return timerTaskManager_.AddTask(std::forward<Runnable>(task), delayMs);
 }
 
-void EventLoop::SubmitTask(concurrent::Runnable&& task) {
+void EventLoop::SubmitTask(Runnable&& task) {
   DEBUG("+ Task(%p)", &task);
   taskQueue_.Push(std::forward<Runnable>(task));
   WakeUp();
@@ -74,17 +78,16 @@ void EventLoop::CompleteTasks() {
   }
 }
 
+void EventLoop::CompleteCleanUpTasks() {
+  while (! cleanTaskQueue_.empty()) {
+    Runnable& task = cleanTaskQueue_.front();
+    task();
+    cleanTaskQueue_.pop();
+  }
+}
+
 // Wake up the eventloop to complete the task submitted.
 void EventLoop::WakeUp() { wakeUpHandler_.WakeUp(); }
-
-Ptr<Channel> EventLoop::RegisterChannel(const ServerSocketFD& socketFD) {
-  return Ptr<Channel>(new Channel(selector_.get(), socketFD.fd()));
-}
-
-Ptr<Channel> EventLoop::RegisterChannel(const network::ConnectionSocketFD& connectFD) {
-  return Ptr<Channel>(new Channel(selector_.get(), connectFD.fd()));
-}
-
 
 // -----------------------
 class WakeUpHandler;
@@ -145,7 +148,7 @@ Channel::Channel(Selector* selector, int fd)
 
 void Channel::Close() {
   if (fd_ > 0) {
-    DEBUG("x Channel(%lu) fd(%d)", id_, fd_);
+    DEBUG("Delete Channel(%lu) fd(%d)", id_, fd_);
     selector_->RemoveChannel(this);
     ::close(fd_);
     fd_ = -1;
