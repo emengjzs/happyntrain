@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.2.2)
 project(happy-network-train)
 set(HAPPY_N_TRAIN_TARGET_VERSION "0.0.1" CACHE STRING "happy-network-train version")
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_COMPILER_ID "Clang")
