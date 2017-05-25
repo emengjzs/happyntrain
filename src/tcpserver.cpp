@@ -30,11 +30,12 @@ void TCPChannel::Close() {}
 
 // Register channel to eventloop
 // including selector, events, and event-callback
-void TCPChannel::Register(Ref<TCPChannel> self) {
+void TCPChannel::Register() {
   channel_ = eventloop_->RegisterChannel(connectionSocket_);
   // TODO: should register kWriteEventFlag ?
   channel_->SetReadEnable();
   state_ = State::CONNECTED;
+  auto self = shared_from_this();
   channel_->OnRead([self] { self->OnReadable(); });
 }
 
@@ -51,7 +52,7 @@ void TCPChannel::OnReadable() {
   while (state_ == State::CONNECTED) {
     Ptr<char[]> buffer(new char[predictInBufferSize_]);
     ssize_t actualReadSize = connectionSocket_.read(buffer.get(), predictInBufferSize_);
-    DEBUG("Channel id(%lu) fd(%d) read(%zu/%zd)", 
+    DEBUG("Channel id(%lu) fd(%d) read(%zd/%zu)", 
       channel_->id(), channel_->fd(), actualReadSize, predictInBufferSize_);
 
     if (actualReadSize == -1) {
@@ -67,7 +68,7 @@ void TCPChannel::OnReadable() {
     } else if (actualReadSize == 0) {
       break;
     } else {
-      inBuffer_.append(buffer.get(), predictInBufferSize_);
+      inBuffer_.append(buffer.get(), actualReadSize);
       if (actualReadSize == predictInBufferSize_ && predictInBufferSize_ < maxBufferSize) {
         predictInBufferSize_ <<= 1;
       }    
@@ -109,24 +110,24 @@ void TCPServer::Listen() {
   Bind(listenFD);
   EXIT_IF(listenFD.listen(128) == false, "fd(%d) listen to port(%d) failed",
           listenFD.fd(), address_.port);
-  INFO("fd(%d) is now listening on port(%d)", listenFD.fd(), address_.port);
+  INFO("Server Socket FD(%d) is now listening on port(%d)", listenFD.fd(), address_.port);
   listenChannel_ = eventloop_->RegisterChannel(listenFD);
-  listenChannel_->SetReadEnable().OnRead([this]() { OnAcceptable(); });
+  listenChannel_->SetReadEnable().OnRead([this] { this->OnAcceptable(); });
 }
 
 void TCPServer::Bind(ServerSocketFD& listenFD) {
   // Fail the program if these fail
-  EXIT_IF(listenFD.invalid(), "create listen socket fd failed");
-  EXIT_IF(listenFD.setNonBlock() == false, "fd(%d) set NONBLOCK fail",
+  EXIT_IF(listenFD.invalid(), "Create Server Socket fd failed");
+  EXIT_IF(listenFD.setNonBlock() == false, "Server Socket fd(%d) set NONBLOCK fail",
           listenFD.fd());
 
   // Still go on even if these fail
-  EXPECT(listenFD.setReusePort(), "fd(%d) set REUSEPORT fail", listenFD.fd());
-  EXPECT(listenFD.setCloseOnExec(), "fd(%d) set CLOSEONEXEC fail",
+  EXPECT(listenFD.setReusePort(), "Server Socket fd(%d) set REUSEPORT fail", listenFD.fd());
+  EXPECT(listenFD.setCloseOnExec(), "Server Socket fd(%d) set CLOSEONEXEC fail",
          listenFD.fd());
 
   EXIT_IF(listenFD.bind(address_.host, address_.port) == false,
-          "fd(%d) bind port(%d) failed", listenFD.fd(), address_.port);
+          "Server Socket fd(%d) bind port(%d) failed", listenFD.fd(), address_.port);
 }
 
 void TCPServer::OnAcceptable() {
@@ -135,12 +136,12 @@ void TCPServer::OnAcceptable() {
     ConnectionSocketFD connectionSocket(listenFD);
     if (connectionSocket.invalid()) {
       if (connectionSocket.err() != EAGAIN && connectionSocket.err() != EINTR)
-        ERROR("accept connection failed on listen fd(%d)", listenFD);
+        ERROR("Accept connection failed on Server Socket fd(%d)", listenFD);
       break;
     }
-    DEBUG("accept connection fd(%d) succeed on listen fd(%d)", connectionSocket.fd(), listenFD);
+    DEBUG("Accept connection fd(%d) succeed on Server Socket fd(%d)", connectionSocket.fd(), listenFD);
     Ref<TCPChannel> connection = newInstance<TCPChannel>(eventloop_, std::move(connectionSocket));
-    connection->Register(connection);
+    connection->Register();
     // connected !
     OnConnect();
   }
