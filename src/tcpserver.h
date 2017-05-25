@@ -38,7 +38,7 @@ class TCPChannel : public Sharable<TCPChannel>, private NoCopy {
 
   void Send(std::string msg);
   void Close();
-  void Register(Ref<TCPChannel> self);
+  void Register();
 
   void OnRead(DataListener dataListener) { dataListener_ = dataListener; } 
 
