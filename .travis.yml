@@ -8,6 +8,8 @@ addons:
     packages:
       - clang-3.8
       - g++-5
+    sources:
+      - ubuntu-toolchain-r-test
 env: CLANG_VERSION=3.8
 script:
   - export CXX=clang++-$CLANG_VERSION
