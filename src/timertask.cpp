@@ -17,7 +17,7 @@ namespace timer {
 class TimerTaskManager;
 // -----------------------
 
-TaskId TimerTaskManager::AddTask(concurrent::Runnable&& task,
+TaskId TimerTaskManager::AddTask(Runnable&& task,
                                  uint64_t delay_ms) {
   uint64_t deadline = delay_ms + time::current_time<ms>();
   DEBUG("now(%ld) delay(%lu) deadline(%lu)", time::current_time<ms>(), delay_ms,

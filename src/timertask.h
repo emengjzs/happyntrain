@@ -30,15 +30,15 @@ struct TaskComparator {
 
 class TimerTaskManager : NoCopy {
   SequenceCreator<uint64_t> taskSequencer_;
-  std::map<TaskId, concurrent::Runnable, TaskComparator> taskQueue_;
+  std::map<TaskId, Runnable, TaskComparator> taskQueue_;
   using TaskQueueIterator =
-      std::map<TaskId, concurrent::Runnable, TaskComparator>::iterator;
+      std::map<TaskId, Runnable, TaskComparator>::iterator;
 
  public:
   TimerTaskManager() : taskSequencer_(1), taskQueue_() {}
   ~TimerTaskManager() {}
 
-  TaskId AddTask(concurrent::Runnable&& task, uint64_t delay);
+  TaskId AddTask(Runnable&& task, uint64_t delay);
 
   int64_t GetNextTimeout();
 
