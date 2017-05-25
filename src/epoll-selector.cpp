@@ -24,10 +24,8 @@ struct epoll_event EpollSelector::GetEpollEvent(Channel* channel) {
 EpollSelector::EpollSelector(int i) : 
   id_(GetNewSelectorId()),
   epoll_fd_() {
-
-  DEBUG("param: %d", i);
   EXPECT(epoll_fd_->valid(), "epoll create failed");
-  INFO("+ epollfd(%d)", epoll_fd_->fd());
+  INFO("Create epollfd(%d)", epoll_fd_->fd());
 }
 
 EpollSelector::~EpollSelector() {
@@ -35,11 +33,11 @@ EpollSelector::~EpollSelector() {
     // Channel will delete himself from channel set automatically.
     (*active_channels_.begin())->Close();
   }
-  INFO("- epollfd(%d)", epoll_fd_->fd());
+  INFO("Close epollfd(%d)", epoll_fd_->fd());
 }
 
 void EpollSelector::AddChannel(Channel* channel) {
-  DEBUG("+ Channel(%lu) fd(%d) read(%d) write(%d) => Selector(%lu)",
+  DEBUG("Add Channel(%lu) fd(%d) read(%d) write(%d) => Selector(%lu)",
         channel->id(), channel->fd(), channel->IsReadEnabled(),
         channel->IsWriteEnabled(), this->id_);
   struct epoll_event event = GetEpollEvent(channel);
@@ -49,13 +47,13 @@ void EpollSelector::AddChannel(Channel* channel) {
 }
 
 void EpollSelector::RemoveChannel(Channel* channel) {
-  DEBUG("- Channel(%lu) fd(%d) => Selector(%lu)", channel->id(), channel->fd(),
+  DEBUG("Remove Channel(%lu) fd(%d) => Selector(%lu)", channel->id(), channel->fd(),
         this->id_);
   active_channels_.erase(channel);
 }
 
 void EpollSelector::UpdateChannel(Channel* channel) {
-  DEBUG("* Channel(%lu) fd(%d) read(%d) write(%d) => Selector(%lu)",
+  DEBUG("Update Channel(%lu) fd(%d) read(%d) write(%d) => Selector(%lu)",
         channel->id(), channel->fd(), channel->IsReadEnabled(),
         channel->IsWriteEnabled(), this->id_);
   struct epoll_event event = GetEpollEvent(channel);
@@ -70,7 +68,7 @@ void EpollSelector::SelectOnce(int wait_ms) {
         epoll_wait(epoll_fd_, active_events_, kMaxSelectEvents, wait_ms);
   }
   if (last_active_event_idx_) {
-    INFO("Epoll Select: %d events", last_active_event_idx_);
+    DEBUG("Epoll Select: %d events", last_active_event_idx_);
   }
   EXPECT(last_active_event_idx_ >= 0, "Epoll Error: return %d",
          last_active_event_idx_);

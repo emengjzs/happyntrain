@@ -81,10 +81,8 @@ class Channel : NoCopy {
   concurrent::Runnable error_handler_;
 
   Channel& SetEventsFlag(const int flag, bool enable) {
-    DEBUG("%04x", events_flag_);
     events_flag_ = enable ? events_flag_ | flag : events_flag_ & (~flag);
     selector_->UpdateChannel(this);
-    DEBUG("%04x", events_flag_);
     return *this;
   }
 
