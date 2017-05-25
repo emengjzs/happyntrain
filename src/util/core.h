@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstring>
 #include <memory>
+#include <functional>
 
 #include "logging.h"
 
@@ -99,6 +100,9 @@ class SequenceCreator {
   T GetNextId() { return ++id_; }
   T operator()() { return GetNextId(); }
 };
+
+// Interface : () => void
+using Runnable = std::function<void()>;
 
 // end happyntrain
 }
