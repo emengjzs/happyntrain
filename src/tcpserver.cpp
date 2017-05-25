@@ -1,6 +1,9 @@
 #include "tcpserver.h"
 
 #include "util/net.h"
+#include "util/core.h"
+#include <assert.h>
+
 
 using namespace std;
 using namespace happyntrain::network;
@@ -22,7 +25,7 @@ TCPChannel::TCPChannel(EventLoop* eventloop, ConnectionSocketFD&& connectionSock
       dataListener_(nullptr)
       {}
 
-TCPChannel::~TCPChannel() {}
+TCPChannel::~TCPChannel() { DEBUG("Destroy TCPChannel port(%u)", address_.port); }
 
 void TCPChannel::Send(std::string msg) {}
 
@@ -36,19 +39,20 @@ void TCPChannel::Register() {
   channel_->SetReadEnable();
   state_ = State::CONNECTED;
   auto self = shared_from_this();
-  channel_->OnRead([self] { self->OnReadable(); });
+  channel_->OnRead([self] { self->OnReadable(self); });
 }
 
 
-void TCPChannel::OnReadable() {
+void TCPChannel::OnReadable(const Ref<TCPChannel>& self) {
+  assert(self.get() == this);
+
   if (state_ != State::CONNECTED) {
-    WARN("connection fd(%d) not in connected state", channel_->fd());
+    WARN("Connection fd(%d) not in connected state", channel_->fd());
     // TODO: handle exception 
     return;
   }
 
   const size_t maxBufferSize = 1 << 15;
-
   while (state_ == State::CONNECTED) {
     Ptr<char[]> buffer(new char[predictInBufferSize_]);
     ssize_t actualReadSize = connectionSocket_.read(buffer.get(), predictInBufferSize_);
@@ -58,14 +62,16 @@ void TCPChannel::OnReadable() {
     if (actualReadSize == -1) {
       int err = connectionSocket_.err();
       if (err == EAGAIN || err == EWOULDBLOCK) {
-        FinishNonBlockingRead();
+        FinishNonBlockingRead(self);
         break;
       } else if (err == EINTR)  // interrupted
         continue;
       else {
+        OrderCleanUpTask();
         break;
       }
     } else if (actualReadSize == 0) {
+      OrderCleanUpTask();
       break;
     } else {
       inBuffer_.append(buffer.get(), actualReadSize);
@@ -76,41 +82,58 @@ void TCPChannel::OnReadable() {
   }
 }
 
-void TCPChannel::FinishNonBlockingRead() {
+void TCPChannel::FinishNonBlockingRead(const Ref<TCPChannel>& self) {
   DEBUG("Buffer(%s)", inBuffer_.str().c_str());
   if (dataListener_) {
-    dataListener_(shared_from_this(), inBuffer_);
+    dataListener_(self, inBuffer_);
   }
   else {
     inBuffer_.clear();
   }
 }
 
+void TCPChannel::OrderCleanUpTask() {
+  auto self = shared_from_this();
+  eventloop_->SubmitCleanUpTask([self] { self->CleanUp(self); });
+}
+
+void TCPChannel::CleanUp(const Ref<TCPChannel>& self) {
+  if (! inBuffer_.empty()) {
+    FinishNonBlockingRead(self);
+  }
+  WARN("Connection fd(%d) clean up", channel_->fd());
+  state_ = State::CLOSED;
+  dataListener_ = nullptr;
+  channel_->DisableHandler();
+}
+
 // -------------------
 class TCPServer;
 //--------------------
 
-TCPServer::TCPServer()
-    : listenChannel_(nullptr),
-      eventloop_(nullptr),
-      address_("127.0.0.1", 12346) {}
-
-TCPServer::TCPServer(EventLoop* eventloop)
+TCPServer::TCPServer(const Ref<EventLoop>& eventloop)
     : listenChannel_(nullptr),
       eventloop_(eventloop),
-      address_("127.0.0.1", 12346) {}
+      address_("127.0.0.1", 12346),
+      connectionCallback_() {}
 
-void TCPServer::Listen(int port) {
+void TCPServer::Listen(int port, Runnable&& onListening) {
   address_ = IP4Address(port);
-  Listen();
+  Listen(std::forward<Runnable>(onListening));
 }
 
-void TCPServer::Listen() {
+void TCPServer::Listen(Runnable&& onListening) {
   ServerSocketFD listenFD;
+  EXIT_IF(listenFD.invalid(), "Create Server Socket failed");
+
   Bind(listenFD);
   EXIT_IF(listenFD.listen(128) == false, "fd(%d) listen to port(%d) failed",
           listenFD.fd(), address_.port);
+          
   INFO("Server Socket FD(%d) is now listening on port(%d)", listenFD.fd(), address_.port);
+  if (onListening) {
+    onListening();
+  }
   listenChannel_ = eventloop_->RegisterChannel(listenFD);
   listenChannel_->SetReadEnable().OnRead([this] { this->OnAcceptable(); });
 }
@@ -140,15 +163,15 @@ void TCPServer::OnAcceptable() {
       break;
     }
     DEBUG("Accept connection fd(%d) succeed on Server Socket fd(%d)", connectionSocket.fd(), listenFD);
-    Ref<TCPChannel> connection = newInstance<TCPChannel>(eventloop_, std::move(connectionSocket));
+    Ref<TCPChannel> connection = newInstance<TCPChannel>(eventloop_.get(), std::move(connectionSocket));
     connection->Register();
     // connected !
-    OnConnect();
+    connectionCallback_(connection);
   }
 }
 
-void TCPServer::OnConnect() {
-  
+void TCPServer::OnConnect(ConnectionListener&& cb) {
+  connectionCallback_ = cb;
 }
 
 // end happytrain
