@@ -10,6 +10,7 @@
 #include "src/util/core.h"
 #include "src/util/fd.h"
 #include "src/util/net.h"
+#include "src/buffer.h"
 
 using namespace std;
 using namespace happyntrain;
@@ -25,10 +26,20 @@ struct A {
 };
 
 int main() {
-  EventLoop eventloop(0);
-  TCPServer server(&eventloop);
-  server.Listen(8888);
-  eventloop.Run();
+  auto eventloop = newInstance<EventLoop>(0);
+  TCPServer server(eventloop);
+
+  server.OnConnect([](auto& socket) {
+    socket->OnRead([](auto& self, auto& buffer) {
+      INFO("%s", buffer.retrieve().c_str());
+    });
+  });
+
+  const int port = 8888; 
+  server.Listen(port, [=]{
+    INFO("Server is now listening on %d", port);
+  });
+  eventloop->Run();
   // auto server = TCPServer::Create([&](auto socket) {
   //                 socker.end("goodbye\n");
   //               })->OnError([&](auto error) {});
