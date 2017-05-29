@@ -19,6 +19,9 @@ mkdir build && cd build && cmake .. && make
 The example is written in C++14.
 
 ```C++
+#include <iostream>
+#include <string>
+
 #include "src/eventloop.h"
 #include "src/tcpserver.h"
 #include "src/util/core.h"
@@ -32,7 +35,7 @@ int main() {
 
   server.OnConnect([](auto& socket) {
     socket->OnRead([](auto& self, auto& buffer) {
-      INFO("%s", buffer.retrieve().c_str());
+      self->Send(buffer);
     });
   });
 
