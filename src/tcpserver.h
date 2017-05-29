@@ -28,7 +28,7 @@ class TCPChannel : public Sharable<TCPChannel>, private NoCopy {
 
   Buffer inBuffer_;
   size_t predictInBufferSize_;
-  Buffer outBuffer_;
+  OutputBuffer outBuffer_;
 
   DataListener dataListener_;
 
@@ -36,7 +36,8 @@ class TCPChannel : public Sharable<TCPChannel>, private NoCopy {
   TCPChannel(EventLoop* eventloop, network::ConnectionSocketFD&& connectionSocket);
   ~TCPChannel();
 
-  void Send(std::string msg);
+  void Send(std::string&& msg);
+  void Send(Buffer& buffer) { Send(buffer.retrieve()); }
   void Close();
   void Register();
 
@@ -46,6 +47,7 @@ class TCPChannel : public Sharable<TCPChannel>, private NoCopy {
 
  private:
   void OnReadable(const Ref<TCPChannel>& self);
+  void OnWritable(const Ref<TCPChannel>& self);
   void FinishNonBlockingRead(const Ref<TCPChannel>& self);
   void OrderCleanUpTask();
   void CleanUp(const Ref<TCPChannel>& self);

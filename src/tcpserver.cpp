@@ -4,6 +4,7 @@
 #include "util/core.h"
 #include <assert.h>
 
+#include <sys/uio.h>
 
 using namespace std;
 using namespace happyntrain::network;
@@ -27,9 +28,16 @@ TCPChannel::TCPChannel(EventLoop* eventloop, ConnectionSocketFD&& connectionSock
 
 TCPChannel::~TCPChannel() { DEBUG("Destroy TCPChannel port(%u)", address_.port); }
 
-void TCPChannel::Send(std::string msg) {}
+void TCPChannel::Send(std::string&& msg) {
+  outBuffer_.append(std::forward<string>(msg));
+  if (! channel_->IsWriteEnabled()) {
+    channel_->SetWriteEnable();
+  }
+}
+
 
 void TCPChannel::Close() {}
+
 
 // Register channel to eventloop
 // including selector, events, and event-callback
@@ -40,6 +48,7 @@ void TCPChannel::Register() {
   state_ = State::CONNECTED;
   auto self = shared_from_this();
   channel_->OnRead([self] { self->OnReadable(self); });
+  channel_->OnWrite([self] { self->OnWritable(self); });
 }
 
 
@@ -47,7 +56,7 @@ void TCPChannel::OnReadable(const Ref<TCPChannel>& self) {
   assert(self.get() == this);
 
   if (state_ != State::CONNECTED) {
-    WARN("Connection fd(%d) not in connected state", channel_->fd());
+    WARN("Connection fd(%d) not in connected state when readable.", channel_->fd());
     // TODO: handle exception 
     return;
   }
@@ -66,11 +75,8 @@ void TCPChannel::OnReadable(const Ref<TCPChannel>& self) {
         break;
       } else if (err == EINTR)  // interrupted
         continue;
-      else {
-        OrderCleanUpTask();
-        break;
-      }
-    } else if (actualReadSize == 0) {
+    } 
+    if (actualReadSize <= 0) {
       OrderCleanUpTask();
       break;
     } else {
@@ -80,6 +86,44 @@ void TCPChannel::OnReadable(const Ref<TCPChannel>& self) {
       }    
     } 
   }
+}
+
+void TCPChannel::OnWritable(const Ref<TCPChannel>& self) {
+  assert(self.get() == this);
+
+  if (state_ != State::CONNECTED) {
+    WARN("Connection fd(%d) not in connected state when writable.", channel_->fd());
+    return;
+  }
+  
+  struct iovec iov[32];
+  while (! outBuffer_.empty()) {
+    int invcnt = outBuffer_.setupIovec(iov, 32);
+    ssize_t nwritten = writev(channel_->fd(), iov, invcnt);
+    DEBUG("Channel id(%lu) fd(%d) write(%zd/%zu)", 
+      channel_->id(), channel_->fd(), nwritten, outBuffer_.size());
+
+    if (nwritten > 0) {
+      outBuffer_.pop(nwritten);
+      continue;
+    }
+    if (nwritten == -1) {
+      int err = connectionSocket_.err();
+      if (err == EAGAIN || err == EWOULDBLOCK) {
+        break;
+      } else if (err == EINTR)  // interrupted
+        continue;
+    }
+    if (nwritten <= 0) {
+      WARN("Channel id(%lu) fd(%d) write error(%d)", channel_->id(), channel_->fd(), connectionSocket_.err());
+      break;
+    } 
+  }
+
+  if (outBuffer_.empty() && channel_->IsWriteEnabled()) {
+     channel_->SetWriteEnable(false);
+  }
+
 }
 
 void TCPChannel::FinishNonBlockingRead(const Ref<TCPChannel>& self) {
