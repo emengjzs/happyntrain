@@ -10,6 +10,7 @@
 #include "util/concurrent.h"
 #include "util/core.h"
 #include "util/net.h"
+#include "util/eventfd.h"
 
 namespace happyntrain {
 
@@ -27,6 +28,7 @@ class EventLoop : NoCopy {
     Ptr<Channel> eventChannel_;
     EventLoop* eventLoop_;
     bool wakeUp_;
+    fd::EventFD eventfd_;
 
    public:
     explicit WakeUpHandler();

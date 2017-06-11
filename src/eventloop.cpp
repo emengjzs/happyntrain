@@ -1,11 +1,8 @@
 #include "eventloop.h"
 
-#include <fcntl.h>
-#include <sys/eventfd.h>
 #include <unistd.h>
 
 #include <algorithm>
-#include <functional>
 #include <utility>
 
 #include "selector.h"
@@ -93,31 +90,29 @@ void EventLoop::WakeUp() { wakeUpHandler_.WakeUp(); }
 class WakeUpHandler;
 // -------------------------
 
-EventLoop::WakeUpHandler::WakeUpHandler() : eventLoop_(NULL), wakeUp_(false) {}
+EventLoop::WakeUpHandler::WakeUpHandler() : eventLoop_(NULL), wakeUp_(false), eventfd_() {}
 
 void EventLoop::WakeUpHandler::Init(EventLoop* eventLoop) {
   eventLoop_ = eventLoop;
-  int efd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-  EXPECT(efd > 0, "Event fd create failed.");
-  INFO("+ eventfd(%d)", efd);
-  eventChannel_ = Ptr<Channel>(new Channel(eventLoop->selector_.get(), efd));
+  EXPECT(eventfd_.fd() > 0, "Event fd create failed.");
+  INFO("+ eventfd(%d)", eventfd_.fd());
+  eventChannel_ = Ptr<Channel>(new Channel(eventLoop->selector_.get(), eventfd_.fd()));
   eventChannel_->SetReadEnable().OnRead(
-      bind(&EventLoop::WakeUpHandler::OnRead, this));
+      [this] { this->OnRead(); });
 }
 
 void EventLoop::WakeUpHandler::OnRead() {
   uint64_t v = 0;
-  int r = -1;
   if (eventChannel_->fd() >= 0) {
-    r = read(eventChannel_->fd(), &v, sizeof(v));
+    v = eventfd_.read();
     INFO("Read eventfd, fd(%d), v(%lu)", eventChannel_->fd(), v);
   }
   if (wakeUp_) {
     WARN("%s", "This eventloop has been waked up before! Skip this.");
     return;
   }
-  if (r < 0 || v == 0) {
-    WARN("Eventfd read error, r(%d), v(%lu), eventfd(%d)", r, v,
+  if (v <= 0) {
+    WARN("Eventfd read error, v(%lu), eventfd(%d)", v,
          eventChannel_->fd());
     return;
   }
@@ -128,9 +123,8 @@ void EventLoop::WakeUpHandler::OnRead() {
 
 void EventLoop::WakeUpHandler::WakeUp() {
   INFO("Wake up eventloop(%ld)", eventLoop_->selector_->id());
-  uint64_t n = 1;
-  int r = write(eventChannel_->fd(), &n, sizeof(n));
-  EXPECT(r == sizeof(n), "Write eventfd failed: r(%d) fd(%d)", r,
+  bool r = eventfd_.write(1);
+  EXPECT(r == true, "Write eventfd failed: r(%d) fd(%d)", r,
          eventChannel_->fd());
 }
 
