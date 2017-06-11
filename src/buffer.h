@@ -52,7 +52,12 @@ public:
 
   void append(std::string&& str) {
     size_ += str.size();
-    content_.emplace_back(std::forward<std::string>(str));
+    if (size_ > 0 && content_.back().capacity() - content_.back().size() >= str.size()) {
+      content_.back().append(str);
+    }
+    else {
+      content_.emplace_back(std::forward<std::string>(str));
+    }
   }
 
   int setupIovec(struct iovec* vec, const size_t size) {
